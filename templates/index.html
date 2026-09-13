@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>snapwatch — {{.Dir}}</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>{{.CSS}}</style>
+<script src="/static/htmx.min.js"></script>
+<script src="/static/sse.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/events">
+<aside>
+  <header title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></header>
+  <ul id="timeline"
+      hx-get="/snapshots" hx-vals="js:{after: latest()}"
+      hx-trigger="sse:snapshot" hx-swap="afterbegin">
+    {{template "snapshots.html" .Entries}}
+  </ul>
+</aside>
+<main id="diff"><p class="empty">Select a snapshot.</p></main>
+<script>
+const tl = document.getElementById('timeline');
+let anchor = null;
+function latest() { const li = tl.querySelector('li'); return li ? li.dataset.sha : ''; }
+function load(url) { htmx.ajax('GET', url, '#diff'); }
+function select(li, shift) {
+  tl.querySelectorAll('.sel,.range').forEach(e => e.classList.remove('sel', 'range'));
+  if (shift && anchor && anchor !== li) {
+    const items = [...tl.children], a = items.indexOf(anchor), b = items.indexOf(li);
+    const [hi, lo] = a < b ? [a, b] : [b, a]; // hi = newer (top of list)
+    items.slice(hi, lo + 1).forEach(e => e.classList.add('range'));
+    anchor.classList.add('sel'); li.classList.add('sel');
+    load('/diff/' + items[lo].dataset.sha + '..' + items[hi].dataset.sha);
+    return;
+  }
+  anchor = li; li.classList.add('sel');
+  load('/diff/' + li.dataset.sha);
+}
+tl.addEventListener('click', e => { const li = e.target.closest('li'); if (li) select(li, e.shiftKey); });
+tl.addEventListener('htmx:afterSwap', () => {
+  if (tl.scrollTop < 10) { const li = tl.querySelector('li'); if (li) select(li, false); }
+});
+</script>
+</body>
+</html>

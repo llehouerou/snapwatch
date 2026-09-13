@@ -1,4 +1,4 @@
-module snapwatch
+module github.com/llehouerou/snapwatch
 
 go 1.26.7
 

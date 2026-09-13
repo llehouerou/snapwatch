@@ -13,7 +13,7 @@
           pname = "snapwatch";
           version = "0.1.0";
           src = ./.;
-          vendorHash = null;
+          vendorHash = "sha256-VNSzHmUu+2P8jDc5BMVa2/hJMbCpoJ8Wb53D1Y2AT5o=";
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
             wrapProgram $out/bin/snapwatch --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git ]}

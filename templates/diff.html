@@ -1,0 +1,20 @@
+<h2>{{.Spec}}</h2>
+{{if not .Files}}<p class="empty">No changes.</p>{{end}}
+{{range .Files}}
+<details open>
+  <summary>
+    {{if .OldPath}}<span class="old">{{.OldPath}}</span> → {{end}}{{.Path}}
+    {{if .Added}}<b class="tag">added</b>{{else if .Deleted}}<b class="tag">deleted</b>{{else if .OldPath}}<b class="tag">renamed</b>{{end}}
+    <span class="plus">+{{.Plus}}</span> <span class="minus">−{{.Minus}}</span>
+  </summary>
+  <table>
+    <colgroup><col class="n"><col><col class="n"><col></colgroup>
+    {{range .Rows}}{{if eq .Kind "hunk"}}<tr class="hunk"><td colspan="4">{{.Old}}</td></tr>
+    {{else}}<tr class="{{.Kind}}">
+      <td class="n">{{if .OldNum}}{{.OldNum}}{{end}}</td><td class="c{{if .OldNum}} l{{end}}">{{.Old}}</td>
+      <td class="n">{{if .NewNum}}{{.NewNum}}{{end}}</td><td class="c{{if .NewNum}} r{{end}}">{{.New}}</td>
+    </tr>
+    {{end}}{{end}}
+  </table>
+</details>
+{{end}}
