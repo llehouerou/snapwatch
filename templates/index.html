@@ -8,7 +8,7 @@
 <script src="/static/htmx.min.js"></script>
 <script src="/static/sse.js"></script>
 </head>
-<body hx-ext="sse" sse-connect="/events">
+<body hx-ext="sse" sse-connect="/events" hx-trigger="sse:boot">
 <aside>
   <header title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></header>
   <ul id="timeline"
@@ -40,6 +40,8 @@ tl.addEventListener('click', e => { const li = e.target.closest('li'); if (li) s
 tl.addEventListener('htmx:afterSwap', () => {
   if (tl.scrollTop < 10) { const li = tl.querySelector('li'); if (li) select(li, false); }
 });
+// server restarted (new boot id) → reload so templates/static are fresh
+document.body.addEventListener('sse:boot', e => { if (e.detail.data !== '{{.Boot}}') location.reload(); });
 </script>
 </body>
 </html>

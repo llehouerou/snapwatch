@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"strconv"
 	"sync"
+	"time"
 )
 
 //go:embed templates/*.html
@@ -23,6 +25,7 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 
 type Server struct {
 	shadow *Shadow
+	boot   string // identifies this process; pages reload when it changes
 	cache  Cache
 
 	mu   sync.Mutex
@@ -30,7 +33,7 @@ type Server struct {
 }
 
 func NewServer(s *Shadow) *Server {
-	return &Server{shadow: s, subs: make(map[chan string]struct{})}
+	return &Server{shadow: s, boot: strconv.FormatInt(time.Now().UnixNano(), 36), subs: make(map[chan string]struct{})}
 }
 
 // Broadcast pushes a new snapshot SHA to every SSE client.
@@ -63,6 +66,7 @@ func (sv *Server) index(w http.ResponseWriter, r *http.Request) {
 	}
 	sv.render(w, "index.html", map[string]any{
 		"Dir":     sv.shadow.WorkTree,
+		"Boot":    sv.boot,
 		"Entries": entries,
 		"CSS":     template.CSS(StyleCSS()),
 	})
@@ -119,7 +123,7 @@ func (sv *Server) events(w http.ResponseWriter, r *http.Request) {
 		delete(sv.subs, ch)
 		sv.mu.Unlock()
 	}()
-	fmt.Fprint(w, ": connected\n\n")
+	fmt.Fprintf(w, "retry: 500\nevent: boot\ndata: %s\n\n", sv.boot)
 	rc.Flush()
 	for {
 		select {

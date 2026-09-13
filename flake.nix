@@ -25,7 +25,7 @@
 
       devShells = forAll (pkgs: {
         default = pkgs.mkShell {
-          packages = with pkgs; [ go gopls git ];
+          packages = with pkgs; [ go gopls git watchexec ];
         };
       });
     };

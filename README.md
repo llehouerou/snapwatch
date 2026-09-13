@@ -21,3 +21,7 @@ second one for the cumulative diff. Snapshots live in
 
     snapwatch /tmp/demo            # terminal 1
     echo x >> /tmp/demo/a.txt      # terminal 2 — the timeline updates without reloading
+
+## Hacking
+
+    watchexec -r -- go run . /tmp/demo   # in `nix develop`; the page reloads itself on restart
