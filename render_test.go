@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -65,17 +66,23 @@ func TestRenderDiff(t *testing.T) {
 func TestInlineDiff(t *testing.T) {
 	hl := highlighter("x.go")
 	old, new := inlineDiff("return a+b", "return a + b")
-	if old != (span{8, 9}) || new != (span{8, 11}) {
-		t.Fatalf("spans: %+v %+v", old, new)
+	if len(old) != 0 || !slices.Equal(new, []span{{8, 9}, {10, 11}}) {
+		t.Fatalf("spaces: %+v %+v", old, new)
 	}
-	if got := string(hl("return a + b", new)); !strings.Contains(got, "<mark>") || !strings.Contains(got, "</mark>") ||
+	got := string(hl("return a + b", new))
+	if strings.Count(got, "<mark>") != 2 || strings.Count(got, "</mark>") != 2 ||
 		strings.Contains(got, "\n") || !strings.HasSuffix(got, "b</span>") {
 		t.Errorf("marked html: %s", got)
 	}
-	if a, b := inlineDiff("foo", "bar"); a != (span{}) || b != (span{}) {
+	// two edits in prose: only the changed words, not the span between them
+	old, new = inlineDiff("the quick brown fox", "the slow brown dog")
+	if !slices.Equal(old, []span{{4, 9}, {16, 19}}) || !slices.Equal(new, []span{{4, 8}, {15, 18}}) {
+		t.Errorf("prose: %+v %+v", old, new)
+	}
+	if a, b := inlineDiff("foo", "bar"); a != nil || b != nil {
 		t.Errorf("whole-line change should not be marked: %+v %+v", a, b)
 	}
-	if a, _ := inlineDiff("é", "éa"); a != (span{2, 2}) {
-		t.Errorf("utf8 boundary: %+v", a)
+	if _, b := inlineDiff("é x", "éa x"); !slices.Equal(b, []span{{0, 3}}) {
+		t.Errorf("utf8 word: %+v", b)
 	}
 }
