@@ -9,25 +9,25 @@ body {
   font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 aside {
-  width: 260px; flex: none; display: flex; flex-direction: column;
+  width: 150px; flex: none; display: flex; flex-direction: column;
   border-right: 1px solid var(--line); background: var(--bg2);
 }
 aside header {
-  padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--dim);
+  padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--dim); font-size: 11px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl;
 }
 #timeline { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
 #timeline li {
-  display: grid; grid-template-columns: 1fr auto auto; gap: 0 8px;
-  padding: 5px 12px; cursor: pointer; border-left: 3px solid transparent;
+  display: grid; grid-template-columns: 1fr auto auto; gap: 0 6px; font-size: 12px;
+  padding: 3px 8px; cursor: pointer; border-left: 3px solid transparent;
 }
 #timeline li:hover { background: var(--line); }
 #timeline li.range { background: #2f81f722; }
 #timeline li.sel { border-left-color: var(--sel); background: #2f81f733; }
-#timeline .files { grid-column: 1 / -1; color: var(--dim); font-size: 11px; }
+#timeline .files { grid-column: 1 / -1; color: var(--dim); font-size: 10px; }
 .plus { color: var(--add-fg); }
 .minus { color: var(--del-fg); }
-main { flex: 1; overflow: auto; padding: 0 12px 24px; }
+main { flex: 1; min-width: 0; overflow: auto; padding: 0 6px 24px; }
 main h2 { font-size: 12px; color: var(--dim); font-weight: normal; margin: 10px 0; }
 .empty { color: var(--dim); margin: 24px 0; }
 details { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
@@ -41,8 +41,8 @@ summary .tag {
   border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; margin: 0 6px;
 }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-td { padding: 0 6px; vertical-align: top; }
-col.n { width: 4em; }
+td { padding: 0 4px; vertical-align: top; }
+col.n { width: 3.2em; }
 td.n { text-align: right; color: var(--dim); user-select: none; }
 td.c { white-space: pre-wrap; word-break: break-all; }
 tr.hunk td { color: var(--dim); background: var(--bg2); padding: 2px 10px; }
