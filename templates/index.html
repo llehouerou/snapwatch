@@ -9,37 +9,16 @@
 <script src="/static/sse.js"></script>
 </head>
 <body hx-ext="sse" sse-connect="/events" hx-trigger="sse:boot">
-<aside>
-  <header title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></header>
-  <ul id="timeline"
-      hx-get="/snapshots" hx-vals="js:{after: latest()}"
-      hx-trigger="sse:snapshot" hx-swap="afterbegin">
-    {{template "snapshots.html" .Entries}}
-  </ul>
-</aside>
-<main id="diff"><p class="empty">Select a snapshot.</p></main>
+<header title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></header>
+<main id="feed">
+  {{if not .Sections}}<p class="empty">Waiting for the first change…</p>{{end}}
+  {{template "feed.html" .}}
+</main>
+<!-- sibling, not ancestor: keeps hx-vals from leaking into the feed's own requests -->
+<div hx-get="/feed" hx-vals="js:{after: latest()}" hx-trigger="sse:snapshot"
+     hx-target="#feed" hx-swap="afterbegin"></div>
 <script>
-const tl = document.getElementById('timeline');
-let anchor = null;
-function latest() { const li = tl.querySelector('li'); return li ? li.dataset.sha : ''; }
-function load(url) { htmx.ajax('GET', url, '#diff'); }
-function select(li, shift) {
-  tl.querySelectorAll('.sel,.range').forEach(e => e.classList.remove('sel', 'range'));
-  if (shift && anchor && anchor !== li) {
-    const items = [...tl.children], a = items.indexOf(anchor), b = items.indexOf(li);
-    const [hi, lo] = a < b ? [a, b] : [b, a]; // hi = newer (top of list)
-    items.slice(hi, lo + 1).forEach(e => e.classList.add('range'));
-    anchor.classList.add('sel'); li.classList.add('sel');
-    load('/diff/' + items[lo].dataset.sha + '..' + items[hi].dataset.sha);
-    return;
-  }
-  anchor = li; li.classList.add('sel');
-  load('/diff/' + li.dataset.sha);
-}
-tl.addEventListener('click', e => { const li = e.target.closest('li'); if (li) select(li, e.shiftKey); });
-tl.addEventListener('htmx:afterSwap', () => {
-  if (tl.scrollTop < 10) { const li = tl.querySelector('li'); if (li) select(li, false); }
-});
+function latest() { const s = document.querySelector('#feed section'); return s ? s.dataset.sha : ''; }
 // server restarted (new boot id) → reload so templates/static are fresh
 document.body.addEventListener('sse:boot', e => { if (e.detail.data !== '{{.Boot}}') location.reload(); });
 </script>

@@ -14,7 +14,7 @@ func TestShadow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if log, err := s.Log(""); err != nil || len(log) != 0 {
+	if log, err := s.Log("", "", 0); err != nil || len(log) != 0 {
 		t.Fatalf("empty repo: log=%v err=%v", log, err)
 	}
 
@@ -41,7 +41,7 @@ func TestShadow(t *testing.T) {
 	write("hello\nbye\n")
 	last := snap()
 
-	log, err := s.Log("")
+	log, err := s.Log("", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,8 +54,17 @@ func TestShadow(t *testing.T) {
 	if log[1].SHA == first {
 		t.Errorf("initial snapshot should be hidden: %+v", log)
 	}
-	if after, _ := s.Log(log[1].SHA); len(after) != 1 || after[0].SHA != last {
+	if after, _ := s.Log(log[1].SHA, "", 0); len(after) != 1 || after[0].SHA != last {
 		t.Errorf("log after second: %+v", after)
+	}
+	if page, _ := s.Log("", "", 1); len(page) != 1 || page[0].SHA != last {
+		t.Errorf("first page of 1: %+v", page)
+	}
+	if older, _ := s.Log("", last, 1); len(older) != 1 || older[0].SHA != log[1].SHA {
+		t.Errorf("page before last: %+v", older)
+	}
+	if none, err := s.Log("", log[1].SHA, 1); err != nil || len(none) != 0 {
+		t.Errorf("page before oldest visible should be empty: %+v %v", none, err)
 	}
 
 	d, err := s.Diff("", last)

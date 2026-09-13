@@ -103,12 +103,19 @@ func (s *Shadow) Snapshot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// Log returns snapshots newer than after (all when after == ""), newest first.
-// The initial snapshot (root commit) is the baseline, not a change: skipped.
-func (s *Shadow) Log(after string) ([]Entry, error) {
+// Log returns snapshots newest first: those newer than after, or up to n
+// older than before (all when both are empty). The initial snapshot (root
+// commit) is the baseline, not a change: skipped.
+func (s *Shadow) Log(after, before string, n int) ([]Entry, error) {
 	args := []string{"log", "--min-parents=1", "--format=%H%x00%ct%x00", "--shortstat"}
-	if after != "" {
+	if n > 0 {
+		args = append(args, "-n", strconv.Itoa(n))
+	}
+	switch {
+	case after != "":
 		args = append(args, after+"..HEAD")
+	case before != "":
+		args = append(args, before+"~1")
 	}
 	out, err := s.git(args...)
 	if err != nil {

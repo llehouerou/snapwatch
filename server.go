@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -19,9 +18,10 @@ var templateFS embed.FS
 //go:embed static
 var staticFS embed.FS
 
-var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-	"short": func(sha string) string { return sha[:8] },
-}).ParseFS(templateFS, "templates/*.html"))
+var tmpl = template.Must(template.ParseFS(templateFS, "templates/*.html"))
+
+// pageSize is how many snapshots one /feed response carries.
+const pageSize = 20
 
 type Server struct {
 	shadow *Shadow
@@ -30,6 +30,12 @@ type Server struct {
 
 	mu   sync.Mutex
 	subs map[chan string]struct{}
+}
+
+// Section is one snapshot in the feed: its timeline entry plus rendered diff.
+type Section struct {
+	Entry
+	Diff template.HTML
 }
 
 func NewServer(s *Shadow) *Server {
@@ -43,7 +49,7 @@ func (sv *Server) Broadcast(sha string) {
 	for ch := range sv.subs {
 		select {
 		case ch <- sha:
-		default: // slow client: drop, it will catch up on its next /snapshots
+		default: // slow client: drop, it will catch up on its next /feed
 		}
 	}
 }
@@ -52,62 +58,81 @@ func (sv *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.FileServerFS(staticFS))
 	mux.HandleFunc("GET /{$}", sv.index)
-	mux.HandleFunc("GET /snapshots", sv.snapshots)
-	mux.HandleFunc("GET /diff/{spec}", sv.diff)
+	mux.HandleFunc("GET /feed", sv.feed)
 	mux.HandleFunc("GET /events", sv.events)
 	return mux
 }
 
 func (sv *Server) index(w http.ResponseWriter, r *http.Request) {
-	entries, err := sv.shadow.Log("")
+	page, err := sv.page("", "", pageSize)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	sv.render(w, "index.html", map[string]any{
-		"Dir":     sv.shadow.WorkTree,
-		"Boot":    sv.boot,
-		"Entries": entries,
-		"CSS":     template.CSS(StyleCSS()),
-	})
+	page["Dir"] = sv.shadow.WorkTree
+	page["Boot"] = sv.boot
+	page["CSS"] = template.CSS(StyleCSS())
+	sv.render(w, "index.html", page)
 }
 
-func (sv *Server) snapshots(w http.ResponseWriter, r *http.Request) {
-	entries, err := sv.shadow.Log(r.URL.Query().Get("after"))
+// feed serves ?after=<sha> (everything newer, for SSE prepend) or
+// ?before=<sha> (next page of older snapshots, for infinite scroll).
+func (sv *Server) feed(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	n := pageSize
+	if q.Get("after") != "" {
+		n = 0
+	}
+	page, err := sv.page(q.Get("after"), q.Get("before"), n)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	sv.render(w, "snapshots.html", entries)
+	sv.render(w, "feed.html", page)
 }
 
-func (sv *Server) diff(w http.ResponseWriter, r *http.Request) {
-	spec := r.PathValue("spec")
-	if html, ok := sv.cache.Get(spec); ok {
-		w.Write([]byte(html))
-		return
-	}
-	from, to, _ := strings.Cut(spec, "..")
-	if to == "" {
-		from, to = "", from
-	}
-	unified, err := sv.shadow.Diff(from, to)
+// page builds feed.html's data: rendered sections, whether an older page
+// exists, and the oldest SHA to ask it from.
+func (sv *Server) page(after, before string, n int) (map[string]any, error) {
+	entries, err := sv.shadow.Log(after, before, n)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return nil, err
+	}
+	sections := make([]Section, 0, len(entries))
+	for _, e := range entries {
+		d, err := sv.diff(e.SHA)
+		if err != nil {
+			return nil, err
+		}
+		sections = append(sections, Section{Entry: e, Diff: d})
+	}
+	page := map[string]any{"Sections": sections, "More": n > 0 && len(entries) == n}
+	if len(entries) > 0 {
+		page["Last"] = entries[len(entries)-1].SHA
+	}
+	return page, nil
+}
+
+// diff renders (and memoises) the side-by-side HTML of one snapshot.
+func (sv *Server) diff(sha string) (template.HTML, error) {
+	if h, ok := sv.cache.Get(sha); ok {
+		return h, nil
+	}
+	unified, err := sv.shadow.Diff("", sha)
+	if err != nil {
+		return "", err
 	}
 	files, err := RenderDiff(unified)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.ExecuteTemplate(&buf, "diff.html", map[string]any{"Spec": spec, "Files": files}); err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+	if err := tmpl.ExecuteTemplate(&buf, "diff.html", files); err != nil {
+		return "", err
 	}
-	sv.cache.Put(spec, template.HTML(buf.String()))
-	w.Write(buf.Bytes())
+	h := template.HTML(buf.String())
+	sv.cache.Put(sha, h)
+	return h, nil
 }
 
 func (sv *Server) events(w http.ResponseWriter, r *http.Request) {

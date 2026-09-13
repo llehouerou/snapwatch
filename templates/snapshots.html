@@ -1,6 +1,0 @@
-{{range .}}<li data-sha="{{.SHA}}" title="{{.SHA}}">
-  <time>{{.Time.Format "15:04:05"}}</time>
-  <span class="plus">+{{.Added}}</span> <span class="minus">−{{.Deleted}}</span>
-  <span class="files">{{.Files}} file{{if ne .Files 1}}s{{end}}</span>
-</li>
-{{end}}

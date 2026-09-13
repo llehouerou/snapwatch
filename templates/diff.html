@@ -1,6 +1,5 @@
-<h2>{{.Spec}}</h2>
-{{if not .Files}}<p class="empty">No changes.</p>{{end}}
-{{range .Files}}
+{{if not .}}<p class="empty">No changes.</p>{{end}}
+{{range .}}
 <details open>
   <summary>
     {{if .OldPath}}<span class="old">{{.OldPath}}</span> → {{end}}{{.Path}}

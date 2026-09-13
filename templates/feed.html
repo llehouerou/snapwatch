@@ -1,0 +1,9 @@
+{{range .Sections}}<section data-sha="{{.SHA}}">
+  <h2 title="{{.SHA}}">
+    <time datetime="{{.Time.Format "2006-01-02T15:04:05"}}">{{.Time.Format "15:04:05"}}</time>
+    <span class="plus">+{{.Added}}</span> <span class="minus">−{{.Deleted}}</span>
+    <span class="files">{{.Files}} file{{if ne .Files 1}}s{{end}}</span>
+  </h2>
+  {{.Diff}}
+</section>
+{{end}}{{if .More}}<div class="more" hx-get="/feed?before={{.Last}}" hx-trigger="intersect once" hx-swap="outerHTML">Loading…</div>{{end}}
