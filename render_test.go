@@ -61,3 +61,21 @@ func TestRenderDiff(t *testing.T) {
 		t.Errorf("first ctx row: %+v", r)
 	}
 }
+
+func TestInlineDiff(t *testing.T) {
+	hl := highlighter("x.go")
+	old, new := inlineDiff("return a+b", "return a + b")
+	if old != (span{8, 9}) || new != (span{8, 11}) {
+		t.Fatalf("spans: %+v %+v", old, new)
+	}
+	if got := string(hl("return a + b", new)); !strings.Contains(got, "<mark>") || !strings.Contains(got, "</mark>") ||
+		strings.Contains(got, "\n") || !strings.HasSuffix(got, "b</span>") {
+		t.Errorf("marked html: %s", got)
+	}
+	if a, b := inlineDiff("foo", "bar"); a != (span{}) || b != (span{}) {
+		t.Errorf("whole-line change should not be marked: %+v %+v", a, b)
+	}
+	if a, _ := inlineDiff("é", "éa"); a != (span{2, 2}) {
+		t.Errorf("utf8 boundary: %+v", a)
+	}
+}

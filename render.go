@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/formatters/html"
@@ -60,7 +61,7 @@ func RenderDiff(unified string) ([]File, error) {
 }
 
 // hunkRows pairs consecutive -/+ runs into shared rows.
-func hunkRows(h *diff.Hunk, hl func(string) template.HTML, f *File) []Row {
+func hunkRows(h *diff.Hunk, hl func(string, span) template.HTML, f *File) []Row {
 	var rows []Row
 	oldN, newN := int32(h.OrigStartLine), int32(h.NewStartLine)
 	lines := strings.Split(strings.TrimSuffix(string(h.Body), "\n"), "\n")
@@ -84,29 +85,31 @@ func hunkRows(h *diff.Hunk, hl func(string) template.HTML, f *File) []Row {
 			f.Plus += len(adds)
 			for j := 0; j < max(len(dels), len(adds)); j++ {
 				r := Row{Kind: "del"}
+				var d, a span
+				if j < len(dels) && j < len(adds) {
+					r.Kind = "mod"
+					d, a = inlineDiff(dels[j], adds[j])
+				} else if j >= len(dels) {
+					r.Kind = "add"
+				}
 				if j < len(dels) {
-					r.OldNum, r.Old = oldN, hl(dels[j])
+					r.OldNum, r.Old = oldN, hl(dels[j], d)
 					oldN++
 				}
 				if j < len(adds) {
-					r.NewNum, r.New = newN, hl(adds[j])
+					r.NewNum, r.New = newN, hl(adds[j], a)
 					newN++
-					if j >= len(dels) {
-						r.Kind = "add"
-					} else {
-						r.Kind = "mod"
-					}
 				}
 				rows = append(rows, r)
 			}
 		case strings.HasPrefix(l, "+"):
 			f.Plus++
-			rows = append(rows, Row{Kind: "add", NewNum: newN, New: hl(l[1:])})
+			rows = append(rows, Row{Kind: "add", NewNum: newN, New: hl(l[1:], span{})})
 			newN++
 			i++
 		default:
 			text := strings.TrimPrefix(l, " ")
-			c := hl(text)
+			c := hl(text, span{})
 			rows = append(rows, Row{Kind: "ctx", OldNum: oldN, NewNum: newN, Old: c, New: c})
 			oldN++
 			newN++
@@ -116,25 +119,86 @@ func hunkRows(h *diff.Hunk, hl func(string) template.HTML, f *File) []Row {
 	return rows
 }
 
-// highlighter returns a per-line syntax highlighter for the given file name.
+// span is a byte range [A,B) to emphasise within a line; zero = none.
+type span struct{ A, B int }
+
+// inlineDiff finds the changed middle of two lines by stripping their common
+// prefix and suffix, so a single added space shows up as a highlighted block.
+func inlineDiff(old, new string) (span, span) {
+	p := 0
+	for p < len(old) && p < len(new) && old[p] == new[p] {
+		p++
+	}
+	for p > 0 && p < len(old) && !utf8.RuneStart(old[p]) {
+		p--
+	}
+	s := 0
+	for s < len(old)-p && s < len(new)-p && old[len(old)-1-s] == new[len(new)-1-s] {
+		s++
+	}
+	for s > 0 && !utf8.RuneStart(old[len(old)-s]) {
+		s--
+	}
+	if p == 0 && s == 0 {
+		return span{}, span{} // whole line differs: marking everything is noise
+	}
+	return span{p, len(old) - s}, span{p, len(new) - s}
+}
+
+// highlighter returns a per-line syntax highlighter for the given file name,
+// emitting chroma spans and wrapping the emphasised range in <mark>.
 // ponytail: line-by-line highlighting mis-colours multi-line tokens (block
 // comments, raw strings); switch to whole-file highlighting if it bothers.
-func highlighter(name string) func(string) template.HTML {
+func highlighter(name string) func(string, span) template.HTML {
 	lexer := lexers.Match(path.Base(name))
 	if lexer == nil {
-		return func(s string) template.HTML { return template.HTML(template.HTMLEscapeString(s)) }
+		lexer = lexers.Fallback
 	}
 	lexer = chroma.Coalesce(lexer)
-	return func(s string) template.HTML {
+	return func(s string, m span) template.HTML {
 		it, err := lexer.Tokenise(nil, s)
 		if err != nil {
 			return template.HTML(template.HTMLEscapeString(s))
 		}
-		var buf bytes.Buffer
-		if err := formatter.Format(&buf, style, it); err != nil {
-			return template.HTML(template.HTMLEscapeString(s))
+		var buf strings.Builder
+		off := 0
+		for _, tok := range it.Tokens() {
+			if off+len(tok.Value) > len(s) { // lexers with EnsureNL append a newline
+				tok.Value = tok.Value[:len(s)-off]
+			}
+			class := ""
+			for t := tok.Type; t != 0 && class == ""; t = t.Parent() {
+				class = chroma.StandardTypes[t]
+			}
+			for _, cut := range []int{m.A, m.B} {
+				if cut > off && cut < off+len(tok.Value) {
+					emit(&buf, class, tok.Value[:cut-off], off, m)
+					tok.Value, off = tok.Value[cut-off:], cut
+				}
+			}
+			emit(&buf, class, tok.Value, off, m)
+			off += len(tok.Value)
 		}
-		return template.HTML(strings.TrimSuffix(buf.String(), "\n"))
+		return template.HTML(buf.String())
+	}
+}
+
+func emit(buf *strings.Builder, class, text string, off int, m span) {
+	if text == "" {
+		return
+	}
+	if off == m.A && m.A < m.B {
+		buf.WriteString("<mark>")
+	}
+	if class != "" {
+		buf.WriteString(`<span class="` + class + `">`)
+	}
+	buf.WriteString(template.HTMLEscapeString(text))
+	if class != "" {
+		buf.WriteString("</span>")
+	}
+	if off+len(text) == m.B && m.A < m.B {
+		buf.WriteString("</mark>")
 	}
 }
 
