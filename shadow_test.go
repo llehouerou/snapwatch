@@ -45,17 +45,17 @@ func TestShadow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(log) != 3 {
-		t.Fatalf("want 3 entries, got %d: %+v", len(log), log)
+	if len(log) != 2 { // initial snapshot is the baseline, hidden
+		t.Fatalf("want 2 entries, got %d: %+v", len(log), log)
 	}
 	if log[0].SHA != last || log[0].Files != 1 || log[0].Added != 1 || log[0].Deleted != 1 {
 		t.Errorf("last entry: %+v", log[0])
 	}
-	if log[2].SHA != first || log[2].Added != 1 {
-		t.Errorf("first entry: %+v", log[2])
+	if log[1].SHA == first {
+		t.Errorf("initial snapshot should be hidden: %+v", log)
 	}
-	if after, _ := s.Log(first); len(after) != 2 {
-		t.Errorf("log after first: want 2, got %d", len(after))
+	if after, _ := s.Log(log[1].SHA); len(after) != 1 || after[0].SHA != last {
+		t.Errorf("log after second: %+v", after)
 	}
 
 	d, err := s.Diff("", last)

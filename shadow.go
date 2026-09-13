@@ -104,8 +104,9 @@ func (s *Shadow) Snapshot() (string, error) {
 }
 
 // Log returns snapshots newer than after (all when after == ""), newest first.
+// The initial snapshot (root commit) is the baseline, not a change: skipped.
 func (s *Shadow) Log(after string) ([]Entry, error) {
-	args := []string{"log", "--format=%H%x00%ct%x00", "--shortstat"}
+	args := []string{"log", "--min-parents=1", "--format=%H%x00%ct%x00", "--shortstat"}
 	if after != "" {
 		args = append(args, after+"..HEAD")
 	}
