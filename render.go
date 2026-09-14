@@ -26,10 +26,15 @@ type File struct {
 	Path, OldPath  string // OldPath set only on rename
 	Added, Deleted bool
 	Plus, Minus    int
+	Big            bool // collapsed by default: too many changed lines to scan (fixtures, lockfiles, cassettes)
 	Rows           []Row
 }
 
 var formatter = html.New(html.PreventSurroundingPre(true))
+
+// bigFile is the changed-line count above which a file starts collapsed.
+// ponytail: fixed threshold; make it a setting if it keeps getting in the way.
+const bigFile = 200
 
 // RenderDiff turns a unified diff into side-by-side file blocks.
 func RenderDiff(unified string) ([]File, error) {
@@ -52,6 +57,7 @@ func RenderDiff(unified string) ([]File, error) {
 				strings.TrimSpace(string(h.Section))))})
 			f.Rows = append(f.Rows, hunkRows(h, hl, &f)...)
 		}
+		f.Big = f.Plus+f.Minus > bigFile
 		files = append(files, f)
 	}
 	return files, nil
