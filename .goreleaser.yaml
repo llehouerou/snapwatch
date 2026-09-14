@@ -1,0 +1,16 @@
+version: 2
+builds:
+  - env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags: -s -w -X main.version={{.Version}}
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+checksum:
+  name_template: checksums.txt
+changelog:
+  use: github-native
+release:
+  footer: |
+    Needs `git` in `PATH`. Install with `nix run github:llehouerou/snapwatch` or `go install github.com/llehouerou/snapwatch@{{ .Tag }}` if you'd rather build from source.

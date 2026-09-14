@@ -58,9 +58,13 @@ nix run github:llehouerou/snapwatch -- ~/dev/my-project
 nix profile install github:llehouerou/snapwatch
 
 # Go
-go install github.com/llehouerou/snapwatch@latest   # git must be in PATH
+go install github.com/llehouerou/snapwatch@latest
+
+# Prebuilt binary (linux/darwin, amd64/arm64): grab it from the releases page
+# https://github.com/llehouerou/snapwatch/releases
 ```
 
+`git` must be in `PATH` — it's the only runtime dependency.
 ## Usage
 
 ```
@@ -75,6 +79,7 @@ prints (it opens a tab for you unless `--open=false`). That's it.
 | `--addr` | `127.0.0.1:7777` | listen address — use a different port per project |
 | `--debounce` | `300ms` | quiet time after the last write before a snapshot is taken |
 | `--open` | `true` | open the browser at startup (skipped if a tab is already connected) |
+| `--version` | | print the version and exit |
 
 ### In the browser
 

@@ -12,6 +12,7 @@
         snapwatch = pkgs.buildGoModule {
           pname = "snapwatch";
           version = "0.1.0";
+          ldflags = [ "-s" "-w" "-X main.version=0.1.0" ];
           src = ./.;
           vendorHash = "sha256-UyAg6KWRmQwFi18IfmsEfjoByQ0y9B9eYbktae7nxsE=";
           nativeBuildInputs = [ pkgs.makeWrapper ];

@@ -10,15 +10,23 @@ import (
 	"time"
 )
 
+// version is set by goreleaser (-X main.version=…); "dev" for local builds.
+var version = "dev"
+
 func main() {
 	addr := flag.String("addr", "127.0.0.1:7777", "listen address")
 	debounce := flag.Duration("debounce", 300*time.Millisecond, "quiet time before a snapshot")
 	open := flag.Bool("open", true, "open the browser at startup")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: snapwatch [flags] <dir>\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("snapwatch", version)
+		return
+	}
 	if flag.NArg() != 1 {
 		flag.Usage()
 		os.Exit(2)
