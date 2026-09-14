@@ -149,32 +149,34 @@ type Change struct {
 
 // Commit is one entry of the project's own history with its files.
 type Commit struct {
-	SHA, Subject string
-	Time         time.Time
-	Files        []Change
+	SHA, Subject, Body, Author string
+	Time                       time.Time
+	Files                      []Change
 }
 
 // History returns the project's last n commits, newest first, with their
 // files; nil when the project is not a git repository.
 func (s *Shadow) History(n int) []Commit {
-	out, err := s.project("log", "-n", strconv.Itoa(n), "-M", "--name-status", "--format=%x00%H%x00%ct%x00%s")
+	// records are \x1e-separated; the header ends at \x1f (the body may span lines)
+	out, err := s.project("log", "-n", strconv.Itoa(n), "-M", "--name-status", "--format=%x1e%H%x00%ct%x00%an%x00%s%x00%b%x1f")
 	if err != nil {
 		return nil
 	}
 	var commits []Commit
-	for _, line := range strings.Split(string(out), "\n") {
-		switch {
-		case line == "":
-		case line[0] == 0:
-			f := strings.Split(line, "\x00")
-			ts, _ := strconv.ParseInt(f[2], 10, 64)
-			commits = append(commits, Commit{SHA: f[1], Time: time.Unix(ts, 0), Subject: f[3]})
-		case len(commits) > 0:
+	for _, rec := range strings.Split(string(out), "\x1e")[1:] {
+		head, files, _ := strings.Cut(rec, "\x1f")
+		f := strings.Split(head, "\x00")
+		ts, _ := strconv.ParseInt(f[1], 10, 64)
+		c := Commit{SHA: f[0], Time: time.Unix(ts, 0), Author: f[2], Subject: f[3], Body: strings.TrimSpace(f[4])}
+		for _, line := range strings.Split(files, "\n") {
+			if line == "" {
+				continue
+			}
 			// "M\tpath" or "R100\told\tnew"
-			f := strings.Split(line, "\t")
-			c := &commits[len(commits)-1]
-			c.Files = append(c.Files, Change{Status: f[0][:1], Path: f[len(f)-1]})
+			p := strings.Split(line, "\t")
+			c.Files = append(c.Files, Change{Status: p[0][:1], Path: p[len(p)-1]})
 		}
+		commits = append(commits, c)
 	}
 	return commits
 }
