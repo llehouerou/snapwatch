@@ -31,6 +31,13 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		return m
 	},
 	"tree": Tree,
+	// when shows only the time for today's timestamps
+	"when": func(t time.Time) string {
+		if t.Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
+			return t.Format("15:04")
+		}
+		return t.Format("01-02 15:04")
+	},
 }).ParseFS(templateFS, "templates/*.html"))
 
 // pageSize is how many snapshots one /feed response carries.

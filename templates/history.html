@@ -11,7 +11,7 @@
   <div class="tree">{{if .Status}}{{template "node" (dict "Rev" "" "Node" (tree .Status))}}{{else}}<p class="empty">clean</p>{{end}}</div>
 </details>
 {{range .Commits}}<details data-key="{{.SHA}}">
-  <summary title="{{.SHA}}"><time>{{.Time.Format "01-02 15:04"}}</time> {{.Subject}}</summary>
+  <summary title="{{.SHA}}"><time>{{when .Time}}</time> {{.Subject}}</summary>
   <div class="tree">{{template "node" (dict "Rev" .SHA "Node" (tree .Files))}}</div>
 </details>
 {{end}}
