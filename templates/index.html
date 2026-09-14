@@ -74,8 +74,13 @@ applyPrefs();
 <script>
 function latest() { const s = document.querySelector('#feed section'); return s ? s.dataset.sha : ''; }
 // file view over the feed: shown when #view receives content, hidden with Esc / the back button
-function hideView() { document.documentElement.classList.remove('viewing'); }
-view.addEventListener('htmx:afterSwap', () => { document.documentElement.classList.add('viewing'); view.scrollTop = 0; });
+// The URL mirrors the view (/?rev=…&path=…) so a reload or a shared link lands on the same file.
+function hideView() { document.documentElement.classList.remove('viewing'); history.replaceState(null, '', '/'); }
+view.addEventListener('htmx:afterSwap', e => {
+  document.documentElement.classList.add('viewing'); view.scrollTop = 0;
+  history.replaceState(null, '', '/' + e.detail.pathInfo.requestPath.slice('/file'.length));
+});
+if (new URLSearchParams(location.search).has('path')) htmx.ajax('GET', '/file' + location.search, '#view');
 document.addEventListener('keydown', e => {
   if (e.target.matches('input, select') || settings.open) return;
   if (e.key === 'Escape') hideView();
