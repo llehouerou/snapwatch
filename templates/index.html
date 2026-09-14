@@ -42,10 +42,7 @@ applyPrefs();
     </label>
     <label>Font
       <input list="fonts" placeholder="system monospace" onfocus="loadFonts()" oninput="setPref('font', this.value.trim())">
-      <datalist id="fonts">
-        <option>JetBrains Mono</option><option>Fira Code</option><option>Cascadia Code</option>
-        <option>Iosevka</option><option>Source Code Pro</option><option>Hack</option><option>Monaspace Neon</option>
-      </datalist>
+      <datalist id="fonts"></datalist>
     </label>
     <label>Size
       <input type="number" min="8" max="32" oninput="setPref('size', +this.value || 13)">
@@ -64,7 +61,7 @@ async function loadFonts() {
     const names = [...new Set((await queryLocalFonts()).map(f => f.family))].sort();
     fonts.replaceChildren(...names.map(n => Object.assign(document.createElement('option'), { value: n })));
     fonts.dataset.loaded = 1;
-  } catch {} // permission denied: keep the static suggestions
+  } catch {} // no API or permission denied: free text only
 }
 // reflect stored prefs in the settings form
 settings.querySelector('select').value = prefs.theme;
