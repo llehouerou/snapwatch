@@ -1,6 +1,6 @@
 :root {
   /* --bg, --bg2, --line, --fg, --dim come from /theme/<name>.css */
-  --add: #2ea04333; --del: #f8514933; --add-fg: #56d364; --del-fg: #f85149;
+  --add: #2ea04333; --del: #f8514933; --add-fg: #56d364; --del-fg: #f85149; --commit: #d29922;
   --h2: 28px; --size: 13px; --font: ;
 }
 * { box-sizing: border-box; }
@@ -37,6 +37,8 @@ section h2 {
   border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline;
 }
 section h2 .files { font-weight: normal; font-size: 11px; }
+section.commit h2 { border-bottom-color: var(--commit); }
+section.commit h2 .message { color: var(--commit); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 section { margin-bottom: 20px; }
 section details { border: 1px solid var(--line); border-radius: 6px; margin: 10px 0; overflow: hidden; }
 section > .empty { margin: 8px 6px; }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,7 +25,7 @@ func TestShadow(t *testing.T) {
 		}
 	}
 	snap := func() string {
-		sha, err := s.Snapshot()
+		sha, err := s.Snapshot("")
 		if err != nil || sha == "" {
 			t.Fatalf("snapshot: sha=%q err=%v", sha, err)
 		}
@@ -35,7 +36,7 @@ func TestShadow(t *testing.T) {
 	first := snap() // initial
 	write("hello\nworld\n")
 	snap()
-	if sha, err := s.Snapshot(); err != nil || sha != "" {
+	if sha, err := s.Snapshot(""); err != nil || sha != "" {
 		t.Fatalf("unchanged tree should not commit: sha=%q err=%v", sha, err)
 	}
 	write("hello\nbye\n")
@@ -77,5 +78,27 @@ func TestShadow(t *testing.T) {
 	d, _ = s.Diff(first, last)
 	if !strings.Contains(d, "+bye") || strings.Contains(d, "world") {
 		t.Errorf("cumulative diff:\n%s", d)
+	}
+
+	// a project commit: no tree change, but a marker snapshot with a message
+	if h := s.ProjectHead(); h != "" {
+		t.Fatalf("not a git repo yet, got head %q", h)
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "."}, {"-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Add greeting"}} {
+		if out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	head := s.ProjectHead()
+	if !strings.HasSuffix(head, " Add greeting") {
+		t.Fatalf("project head: %q", head)
+	}
+	mark, err := s.Snapshot(head)
+	if err != nil || mark == "" {
+		t.Fatalf("marker snapshot: %q %v", mark, err)
+	}
+	log, _ = s.Log("", "", 1)
+	if log[0].SHA != mark || log[0].Message != head || log[0].Files != 0 {
+		t.Errorf("marker entry: %+v", log[0])
 	}
 }

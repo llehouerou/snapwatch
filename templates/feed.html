@@ -1,8 +1,9 @@
-{{range .Sections}}<section data-sha="{{.SHA}}">
+{{range .Sections}}<section data-sha="{{.SHA}}"{{if .Message}} class="commit"{{end}}>
   <h2 title="{{.SHA}}">
     <time datetime="{{.Time.Format "2006-01-02T15:04:05"}}">{{.Time.Format "15:04:05"}}</time>
+    {{if .Message}}<span class="message">⎇ {{.Message}}</span>{{end}}
     {{if gt .Files 1}}<span class="files">{{.Files}} files</span>{{end}}
   </h2>
-  {{.Diff}}
+  {{if or .Files (not .Message)}}{{.Diff}}{{end}}
 </section>
 {{end}}{{if .More}}<div class="more" hx-get="/feed?before={{.Last}}" hx-trigger="intersect once" hx-swap="outerHTML">Loading…</div>{{end}}

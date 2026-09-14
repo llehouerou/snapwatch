@@ -23,10 +23,12 @@ type Shadow struct {
 	WorkTree string
 }
 
-// Entry is one timeline row.
+// Entry is one timeline row. Message is empty for plain snapshots and holds
+// "<sha> <subject>" when the snapshot marks a commit made in the project.
 type Entry struct {
 	SHA     string
 	Time    time.Time
+	Message string
 	Files   int
 	Added   int
 	Deleted int
@@ -79,21 +81,24 @@ func (s *Shadow) git(args ...string) ([]byte, error) {
 	return out, nil
 }
 
-// Snapshot stages everything and commits if anything changed.
-// Returns the new SHA, or "" when the tree was unchanged.
-func (s *Shadow) Snapshot() (string, error) {
+// Snapshot stages everything and commits. With an empty message it only
+// commits when something changed; with a message (a project commit marker)
+// it always commits. Returns the new SHA, or "" when nothing was committed.
+func (s *Shadow) Snapshot(message string) (string, error) {
 	if _, err := s.git("add", "-A"); err != nil {
 		return "", err
 	}
-	_, err := s.git("diff", "--cached", "--quiet")
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-		return "", nil // nothing staged
-	case !errors.As(err, &exit) || exit.ExitCode() != 1:
-		return "", err
+	if message == "" {
+		_, err := s.git("diff", "--cached", "--quiet")
+		var exit *exec.ExitError
+		switch {
+		case err == nil:
+			return "", nil // nothing staged
+		case !errors.As(err, &exit) || exit.ExitCode() != 1:
+			return "", err
+		}
 	}
-	if _, err := s.git("commit", "-q", "--allow-empty-message", "-m", ""); err != nil {
+	if _, err := s.git("commit", "-q", "--allow-empty", "--allow-empty-message", "-m", message); err != nil {
 		return "", err
 	}
 	out, err := s.git("rev-parse", "HEAD")
@@ -103,11 +108,23 @@ func (s *Shadow) Snapshot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// ProjectHead returns "<short sha> <subject>" of the watched project's own
+// HEAD, or "" when the project is not a git repository (or has no commits).
+func (s *Shadow) ProjectHead() string {
+	cmd := exec.Command("git", "-C", s.WorkTree, "log", "-1", "--format=%h %s")
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
 // Log returns snapshots newest first: those newer than after, or up to n
 // older than before (all when both are empty). The initial snapshot (root
 // commit) is the baseline, not a change: skipped.
 func (s *Shadow) Log(after, before string, n int) ([]Entry, error) {
-	args := []string{"log", "--min-parents=1", "--format=%H%x00%ct%x00", "--shortstat"}
+	args := []string{"log", "--min-parents=1", "--format=%H%x00%ct%x00%s", "--shortstat"}
 	if n > 0 {
 		args = append(args, "-n", strconv.Itoa(n))
 	}
@@ -132,7 +149,7 @@ func (s *Shadow) Log(after, before string, n int) ([]Entry, error) {
 		case strings.Contains(line, "\x00"):
 			f := strings.Split(line, "\x00")
 			ts, _ := strconv.ParseInt(f[1], 10, 64)
-			entries = append(entries, Entry{SHA: f[0], Time: time.Unix(ts, 0)})
+			entries = append(entries, Entry{SHA: f[0], Time: time.Unix(ts, 0), Message: f[2]})
 		case len(entries) > 0:
 			e := &entries[len(entries)-1]
 			// " 3 files changed, 10 insertions(+), 2 deletions(-)"

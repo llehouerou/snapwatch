@@ -25,6 +25,11 @@ func Watch(dir string, debounce time.Duration, snap func()) error {
 	if err := addTree(w, dir); err != nil {
 		return err
 	}
+	// The project's own commits only touch .git (HEAD, refs, logs/HEAD): watch
+	// those two directories flat so snap() gets a chance to notice a new HEAD.
+	for _, p := range []string{".git", ".git/logs"} {
+		_ = w.Add(filepath.Join(dir, p)) // absent when the project is not a git repo
+	}
 
 	timer := time.NewTimer(0)
 	<-timer.C

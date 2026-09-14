@@ -31,14 +31,21 @@ func main() {
 	log.Printf("watching %s (shadow repo %s)", shadow.WorkTree, shadow.GitDir)
 	sv := NewServer(shadow)
 
+	// A snapshot carries the project's commit as its message when HEAD moved
+	// since the previous one; the initial snapshot never does.
+	head := shadow.ProjectHead()
 	snap := func() {
-		sha, err := shadow.Snapshot()
+		message := ""
+		if h := shadow.ProjectHead(); h != head {
+			head, message = h, h
+		}
+		sha, err := shadow.Snapshot(message)
 		if err != nil {
 			log.Println("snapshot:", err)
 			return
 		}
 		if sha != "" {
-			log.Println("snapshot", sha[:8])
+			log.Println("snapshot", sha[:8], message)
 			sv.Broadcast(sha)
 		}
 	}
