@@ -10,7 +10,6 @@
 
 <p align="center">
   <a href="https://github.com/llehouerou/snapwatch/actions/workflows/ci.yml"><img src="https://github.com/llehouerou/snapwatch/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
-  <a href="https://goreportcard.com/report/github.com/llehouerou/snapwatch"><img src="https://goreportcard.com/badge/github.com/llehouerou/snapwatch" alt="go report"></a>
   <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/llehouerou/snapwatch" alt="go version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
   <img src="https://img.shields.io/badge/deps-fsnotify%20%C2%B7%20chroma%20%C2%B7%20go--diff-lightgrey" alt="deps">
