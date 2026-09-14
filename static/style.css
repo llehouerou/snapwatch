@@ -48,6 +48,3 @@ td.c:not(.l):not(.r) { background: #00000033; }
 tr.del td.n:first-child, tr.mod td.n:first-child { background: var(--del); }
 tr.add td.n:nth-child(3), tr.mod td.n:nth-child(3) { background: var(--add); }
 .chroma { background: transparent !important; color: inherit !important; }
-mark { color: inherit; border-radius: 2px; }
-td.l mark { background: #f8514966; }
-td.r mark { background: #2ea04366; }
