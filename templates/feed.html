@@ -1,8 +1,7 @@
 {{range .Sections}}<section data-sha="{{.SHA}}">
   <h2 title="{{.SHA}}">
     <time datetime="{{.Time.Format "2006-01-02T15:04:05"}}">{{.Time.Format "15:04:05"}}</time>
-    <span class="plus">+{{.Added}}</span> <span class="minus">−{{.Deleted}}</span>
-    <span class="files">{{.Files}} file{{if ne .Files 1}}s{{end}}</span>
+    {{if gt .Files 1}}<span class="files">{{.Files}} files</span>{{end}}
   </h2>
   {{.Diff}}
 </section>

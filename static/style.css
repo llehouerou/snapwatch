@@ -37,9 +37,14 @@ section h2 {
   border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline;
 }
 section h2 .files { font-weight: normal; font-size: 11px; }
-section details { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; overflow: hidden; }
+section { margin-bottom: 20px; }
+section details { border: 1px solid var(--line); border-radius: 6px; margin: 10px 0; overflow: hidden; }
 section > .empty { margin: 8px 6px; }
-summary { padding: 4px 10px; background: var(--bg2); cursor: pointer; user-select: none; }
+summary {
+  padding: 5px 10px; background: var(--bg2); cursor: pointer; user-select: none;
+  font-weight: bold; border-bottom: 1px solid var(--line);
+}
+details:not([open]) summary { border-bottom: 0; }
 summary .old { color: var(--dim); }
 summary .tag {
   font-weight: normal; font-size: 11px; color: var(--dim);
