@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>snapwatch — {{.Dir}}</title>
+<link rel="icon" href="/static/logo.svg">
 <link rel="stylesheet" href="/static/style.css">
 <link id="theme" rel="stylesheet" href="/theme/monokai.css">
 <script>
@@ -23,6 +24,7 @@ applyPrefs();
 </head>
 <body hx-ext="sse" sse-connect="/events" hx-trigger="sse:boot">
 <header>
+  <a class="logo" href="/" title="snapwatch"><img src="/static/logo.svg" alt=""> snapwatch</a>
   <button onclick="setPref('sidebar', !prefs.sidebar)" title="Toggle history (h)">☰</button>
   <button id="back" onclick="hideView()" title="Back to feed (Esc)">← feed</button>
   <span title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></span>
