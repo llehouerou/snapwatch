@@ -41,7 +41,7 @@ applyPrefs();
       </select>
     </label>
     <label>Font
-      <input list="fonts" placeholder="system monospace" oninput="setPref('font', this.value.trim())">
+      <input list="fonts" placeholder="system monospace" onfocus="loadFonts()" oninput="setPref('font', this.value.trim())">
       <datalist id="fonts">
         <option>JetBrains Mono</option><option>Fira Code</option><option>Cascadia Code</option>
         <option>Iosevka</option><option>Source Code Pro</option><option>Hack</option><option>Monaspace Neon</option>
@@ -57,6 +57,15 @@ applyPrefs();
 function latest() { const s = document.querySelector('#feed section'); return s ? s.dataset.sha : ''; }
 // server restarted (new boot id) → reload so templates/static are fresh
 document.body.addEventListener('sse:boot', e => { if (e.detail.data !== '{{.Boot}}') location.reload(); });
+// replace the datalist with installed fonts (Chromium only, asks permission once)
+async function loadFonts() {
+  if (!window.queryLocalFonts || fonts.dataset.loaded) return;
+  try {
+    const names = [...new Set((await queryLocalFonts()).map(f => f.family))].sort();
+    fonts.replaceChildren(...names.map(n => Object.assign(document.createElement('option'), { value: n })));
+    fonts.dataset.loaded = 1;
+  } catch {} // permission denied: keep the static suggestions
+}
 // reflect stored prefs in the settings form
 settings.querySelector('select').value = prefs.theme;
 settings.querySelector('input[list]').value = prefs.font;
