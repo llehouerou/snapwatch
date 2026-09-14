@@ -8,8 +8,11 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/alecthomas/chroma/v2/styles"
 )
 
 //go:embed templates/*.html
@@ -67,6 +70,11 @@ func (sv *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", sv.index)
 	mux.HandleFunc("GET /feed", sv.feed)
 	mux.HandleFunc("GET /events", sv.events)
+	mux.HandleFunc("GET /theme/{name}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/css")
+		w.Header().Set("Cache-Control", "max-age=86400")
+		fmt.Fprint(w, ThemeCSS(strings.TrimSuffix(r.PathValue("name"), ".css")))
+	})
 	return mux
 }
 
@@ -78,7 +86,7 @@ func (sv *Server) index(w http.ResponseWriter, r *http.Request) {
 	}
 	page["Dir"] = sv.shadow.WorkTree
 	page["Boot"] = sv.boot
-	page["CSS"] = template.CSS(StyleCSS())
+	page["Themes"] = styles.Names()
 	sv.render(w, "index.html", page)
 }
 

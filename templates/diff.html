@@ -7,11 +7,11 @@
     <span class="plus">+{{.Plus}}</span> <span class="minus">−{{.Minus}}</span>
   </summary>
   <table class="chroma">
-    <colgroup><col class="n"><col><col class="n"><col></colgroup>
+    <colgroup><col class="num"><col><col class="num"><col></colgroup>
     {{range .Rows}}{{if eq .Kind "hunk"}}<tr class="hunk"><td colspan="4">{{.Old}}</td></tr>
     {{else}}<tr class="{{.Kind}}">
-      <td class="n">{{if .OldNum}}{{.OldNum}}{{end}}</td><td class="c{{if .OldNum}} l{{end}}">{{.Old}}</td>
-      <td class="n">{{if .NewNum}}{{.NewNum}}{{end}}</td><td class="c{{if .NewNum}} r{{end}}">{{.New}}</td>
+      <td class="num">{{if .OldNum}}{{.OldNum}}{{end}}</td><td class="code{{if .OldNum}} lhs{{end}}">{{.Old}}</td>
+      <td class="num">{{if .NewNum}}{{.NewNum}}{{end}}</td><td class="code{{if .NewNum}} rhs{{end}}">{{.New}}</td>
     </tr>
     {{end}}{{end}}
   </table>

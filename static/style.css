@@ -1,18 +1,28 @@
 :root {
-  --bg: #1e1f22; --bg2: #26272b; --fg: #d4d4d4; --dim: #8a8f98; --line: #34363b;
+  /* --bg, --bg2, --line, --fg, --dim come from /theme/<name>.css */
   --add: #2ea04333; --del: #f8514933; --add-fg: #56d364; --del-fg: #f85149;
-  --h2: 28px;
+  --h2: 28px; --size: 13px; --font: ;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
   display: flex; flex-direction: column; background: var(--bg); color: var(--fg);
-  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font: var(--size)/1.4 var(--font) ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 body > header {
-  flex: none; padding: 4px 8px; border-bottom: 1px solid var(--line); background: var(--bg2);
-  color: var(--dim); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl;
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 2px 4px 2px 8px;
+  border-bottom: 1px solid var(--line); background: var(--bg2); color: var(--dim); font-size: 11px;
 }
+body > header span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; }
+body > header button { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 14px; }
+dialog { background: var(--bg2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+dialog::backdrop { background: #0008; }
+dialog form { display: grid; gap: 10px; min-width: 260px; }
+dialog label { display: grid; gap: 3px; color: var(--dim); font-size: 11px; }
+dialog input, dialog select, dialog button {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px;
+}
+dialog form > button { justify-self: end; cursor: pointer; }
 #feed { flex: 1; min-height: 0; overflow: auto; padding: 0 6px 24px; }
 #feed section ~ .empty { display: none; }
 .plus { color: var(--add-fg); }
@@ -37,14 +47,14 @@ summary .tag {
 }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 td { padding: 0 4px; vertical-align: top; }
-col.n { width: 3.2em; }
-td.n { text-align: right; color: var(--dim); user-select: none; }
-td.c { white-space: pre-wrap; word-break: break-all; }
+col.num { width: 3.2em; }
+td.num { text-align: right; color: var(--dim); user-select: none; }
+td.code { white-space: pre-wrap; word-break: break-all; }
 tr.hunk td { color: var(--dim); background: var(--bg2); padding: 2px 10px; }
 tr.hunk td:empty { padding: 1px; }
-tr.del td.l, tr.mod td.l { background: var(--del); }
-tr.add td.r, tr.mod td.r { background: var(--add); }
-td.c:not(.l):not(.r) { background: #00000033; }
-tr.del td.n:first-child, tr.mod td.n:first-child { background: var(--del); }
-tr.add td.n:nth-child(3), tr.mod td.n:nth-child(3) { background: var(--add); }
+tr.del td.lhs, tr.mod td.lhs { background: var(--del); }
+tr.add td.rhs, tr.mod td.rhs { background: var(--add); }
+td.code:not(.lhs):not(.rhs) { background: #80808022; }
+tr.del td.num:first-child, tr.mod td.num:first-child { background: var(--del); }
+tr.add td.num:nth-child(3), tr.mod td.num:nth-child(3) { background: var(--add); }
 .chroma { background: transparent !important; color: inherit !important; }

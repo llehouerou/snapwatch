@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"path"
 	"strings"
@@ -28,10 +29,7 @@ type File struct {
 	Rows           []Row
 }
 
-var (
-	formatter = html.New(html.PreventSurroundingPre(true))
-	style     = styles.Get("monokai")
-)
+var formatter = html.New(html.PreventSurroundingPre(true))
 
 // RenderDiff turns a unified diff into side-by-side file blocks.
 func RenderDiff(unified string) ([]File, error) {
@@ -153,10 +151,26 @@ func highlighter(name string) func(string) template.HTML {
 	}
 }
 
-// StyleCSS is the chroma stylesheet for the chosen style.
-func StyleCSS() string {
+// ThemeCSS returns the stylesheet for a chroma style: the UI palette derived
+// from the style's background/foreground, then the token colours.
+func ThemeCSS(name string) string {
+	st := styles.Get(name) // Fallback when unknown
+	bg := st.Get(chroma.Background)
+	fg, back := bg.Colour, bg.Background
+	if !back.IsSet() {
+		back = chroma.MustParseColour("#1e1f22")
+	}
+	if !fg.IsSet() {
+		fg = chroma.MustParseColour("#d4d4d4")
+	}
+	dir := 1.0 // dark theme: lighten to get panels and lines
+	if back.Brightness() > 0.5 {
+		dir = -1
+	}
 	var buf bytes.Buffer
-	_ = formatter.WriteCSS(&buf, style)
+	fmt.Fprintf(&buf, ":root{--bg:%s;--bg2:%s;--line:%s;--fg:%s;--dim:%s}\n",
+		back, back.Brighten(0.06*dir), back.Brighten(0.16*dir), fg, fg.Brighten(-0.35*dir))
+	_ = formatter.WriteCSS(&buf, st)
 	return buf.String()
 }
 
