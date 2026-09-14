@@ -5,7 +5,7 @@
     {{else if eq .Kind "commit"}}<span class="message">● {{.Message}}</span>
     {{else if gt .Files 1}}<span class="files">{{.Files}} files</span>{{end}}
   </h2>
-  {{if not .Kind}}{{.Diff}}
-  {{else if .Files}}<details class="git"><summary>{{.Files}} file{{if ne .Files 1}}s{{end}} changed by git, not shown</summary>{{.Diff}}</details>{{end}}
+  {{if ne .Kind "branch"}}{{if or .Files (not .Kind)}}{{.Diff}}{{end}}
+  {{else if .Files}}<details class="git"><summary>{{.Files}} file{{if ne .Files 1}}s{{end}} changed by the checkout, not shown</summary>{{.Diff}}</details>{{end}}
 </section>
 {{end}}{{if .More}}<div class="more" hx-get="/feed?before={{.Last}}" hx-trigger="intersect once" hx-swap="outerHTML">Loading…</div>{{end}}

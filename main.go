@@ -33,7 +33,10 @@ func main() {
 
 	// When the project's own git state moved since the previous snapshot, the
 	// snapshot is a marker: "branch <name>" on a switch, else "commit <sha>
-	// <subject>". Its diff is git's doing, not the agent's; the UI folds it.
+	// <subject>". A checkout's diff is git's doing, so the UI folds it; a
+	// commit's diff is real work done in the same window and stays visible.
+	// ponytail: a pull/reset on the same branch shows as work too; compare the
+	// new HEAD's committer time with now if that gets annoying.
 	branch, head := shadow.ProjectHead()
 	snap := func() {
 		message := ""
