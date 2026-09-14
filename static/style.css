@@ -39,16 +39,18 @@ main { flex: 1; min-width: 0; overflow: auto; padding: 0 6px 24px; }
   width: 280px; flex: none; overflow: auto; border-right: 1px solid var(--line); background: var(--bg2);
   font-size: 12px;
 }
-#history details { border-bottom: 1px solid var(--line); }
+#history > details { border-bottom: 1px solid var(--line); }
 #history summary {
   padding: 4px 8px; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #history summary time { color: var(--dim); font-size: 11px; }
 #history .count { color: var(--dim); font-weight: normal; }
-#history ul { list-style: none; margin: 0; padding: 0 0 4px; }
-#history li a { display: flex; gap: 4px; padding: 1px 8px 1px 16px; color: var(--fg); text-decoration: none; }
-#history .path { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
-#history li a:hover { background: var(--line); }
+#history .tree { padding: 0 0 4px 8px; }
+#history .dir { padding-left: 12px; }
+#history .dir > summary { padding: 1px 4px; color: var(--dim); font-weight: normal; border: 0; background: none; }
+#history .tree a { display: flex; gap: 4px; padding: 1px 4px 1px 16px; color: var(--fg); text-decoration: none; }
+#history .path { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#history .tree a:hover { background: var(--line); }
 #history .empty { margin: 4px 20px; font-size: 11px; }
 .st { display: inline-block; width: 1.2em; text-align: center; font-weight: bold; }
 .st-A, .st-\? { color: var(--add-fg); }

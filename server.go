@@ -30,6 +30,7 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		}
 		return m
 	},
+	"tree": Tree,
 }).ParseFS(templateFS, "templates/*.html"))
 
 // pageSize is how many snapshots one /feed response carries.

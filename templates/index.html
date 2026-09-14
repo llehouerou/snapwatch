@@ -70,12 +70,12 @@ document.addEventListener('keydown', e => {
 // keep the accordion state when the history refreshes after a snapshot
 const hist = document.getElementById('history');
 hist.addEventListener('htmx:beforeSwap', () => {
-  if (hist.children.length) hist.dataset.open = JSON.stringify([...hist.querySelectorAll('details[open]')].map(d => d.dataset.key));
+  if (hist.children.length) hist.dataset.open = JSON.stringify([...hist.querySelectorAll('details[data-key][open]')].map(d => d.dataset.key));
 });
 hist.addEventListener('htmx:afterSwap', () => {
   if (!hist.dataset.open) return;
   const open = new Set(JSON.parse(hist.dataset.open));
-  hist.querySelectorAll('details').forEach(d => d.open = open.has(d.dataset.key));
+  hist.querySelectorAll('details[data-key]').forEach(d => d.open = open.has(d.dataset.key));
 });
 // server restarted (new boot id) → reload so templates/static are fresh
 document.body.addEventListener('sse:boot', e => { if (e.detail.data !== '{{.Boot}}') location.reload(); });

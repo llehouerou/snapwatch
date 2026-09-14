@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -179,6 +180,48 @@ func (s *Shadow) History(n int) []Commit {
 }
 
 // Status lists the project's uncommitted changes (staged, unstaged, untracked).
+// Node is a directory (Dirs/Files set) or a file (Status/Path set) of a
+// change tree. Single-child directory chains are compacted ("src/main").
+type Node struct {
+	Name, Path, Status string
+	Dirs, Files        []*Node
+}
+
+// Tree groups changes by directory, dirs first then files, both sorted.
+func Tree(changes []Change) *Node {
+	root := &Node{}
+	for _, c := range changes {
+		n := root
+		parts := strings.Split(c.Path, "/")
+		for _, dir := range parts[:len(parts)-1] {
+			i := slices.IndexFunc(n.Dirs, func(d *Node) bool { return d.Name == dir })
+			if i < 0 {
+				n.Dirs = append(n.Dirs, &Node{Name: dir})
+				i = len(n.Dirs) - 1
+			}
+			n = n.Dirs[i]
+		}
+		n.Files = append(n.Files, &Node{Name: parts[len(parts)-1], Path: c.Path, Status: c.Status})
+	}
+	var tidy func(*Node)
+	tidy = func(n *Node) {
+		for _, d := range n.Dirs {
+			tidy(d)
+		}
+		for i, d := range n.Dirs {
+			for len(d.Files) == 0 && len(d.Dirs) == 1 {
+				d = d.Dirs[0]
+				d.Name = n.Dirs[i].Name + "/" + d.Name
+				n.Dirs[i] = d
+			}
+		}
+		byName := func(a, b *Node) int { return strings.Compare(a.Name, b.Name) }
+		slices.SortFunc(n.Dirs, byName)
+		slices.SortFunc(n.Files, byName)
+	}
+	tidy(root)
+	return root
+}
 func (s *Shadow) Status() []Change {
 	out, err := s.project("status", "--porcelain=v1", "-uall")
 	if err != nil {

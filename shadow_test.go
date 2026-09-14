@@ -116,3 +116,26 @@ func TestShadow(t *testing.T) {
 		t.Errorf("marker entry: %+v", log[0])
 	}
 }
+
+func TestTree(t *testing.T) {
+	root := Tree([]Change{
+		{"M", "src/main/java/App.java"},
+		{"A", "README.md"},
+		{"M", "src/main/java/Util.java"},
+		{"D", "src/test/Old.java"},
+		{"A", "Makefile"},
+	})
+	if len(root.Dirs) != 1 || root.Dirs[0].Name != "src" {
+		t.Fatalf("root dirs: %+v", root.Dirs)
+	}
+	if got := []string{root.Files[0].Name, root.Files[1].Name}; got[0] != "Makefile" || got[1] != "README.md" {
+		t.Errorf("root files not sorted: %v", got)
+	}
+	src := root.Dirs[0]
+	if len(src.Dirs) != 2 || src.Dirs[0].Name != "main/java" || src.Dirs[1].Name != "test" {
+		t.Fatalf("src dirs (chain should be compacted): %v %v", src.Dirs[0].Name, src.Dirs[1].Name)
+	}
+	if f := src.Dirs[0].Files; len(f) != 2 || f[0].Name != "App.java" || f[0].Path != "src/main/java/App.java" || f[0].Status != "M" {
+		t.Errorf("main/java files: %+v", f)
+	}
+}

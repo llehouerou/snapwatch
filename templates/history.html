@@ -1,13 +1,17 @@
-{{define "changes"}}<ul>{{$rev := .Rev}}{{range .Files}}
-  <li><a href="#" hx-get="/file?rev={{$rev}}&path={{.Path}}" hx-target="#view" title="{{.Path}}">
-    <b class="st st-{{.Status}}">{{.Status}}</b><span class="path"><bdi dir="ltr">{{.Path}}</bdi></span></a></li>{{end}}
-</ul>{{end}}
+{{define "node"}}{{$rev := .Rev}}
+{{range .Node.Dirs}}<details class="dir" open>
+  <summary title="{{.Name}}">{{.Name}}/</summary>
+  {{template "node" (dict "Rev" $rev "Node" .)}}
+</details>{{end}}
+{{range .Node.Files}}<a href="#" hx-get="/file?rev={{$rev}}&path={{.Path}}" hx-target="#view" title="{{.Path}}">
+  <b class="st st-{{.Status}}">{{.Status}}</b><span class="path">{{.Name}}</span></a>
+{{end}}{{end}}
 <details open data-key="wt">
   <summary>Working tree <span class="count">{{len .Status}}</span></summary>
-  {{if .Status}}{{template "changes" (dict "Rev" "" "Files" .Status)}}{{else}}<p class="empty">clean</p>{{end}}
+  <div class="tree">{{if .Status}}{{template "node" (dict "Rev" "" "Node" (tree .Status))}}{{else}}<p class="empty">clean</p>{{end}}</div>
 </details>
 {{range .Commits}}<details data-key="{{.SHA}}">
   <summary title="{{.SHA}}"><time>{{.Time.Format "01-02 15:04"}}</time> {{.Subject}}</summary>
-  {{template "changes" (dict "Rev" .SHA "Files" .Files)}}
+  <div class="tree">{{template "node" (dict "Rev" .SHA "Node" (tree .Files))}}</div>
 </details>
 {{end}}
