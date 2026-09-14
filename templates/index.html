@@ -29,7 +29,7 @@ applyPrefs();
   <button onclick="settings.showModal()" title="Settings">⚙</button>
 </header>
 <div class="split">
-  <aside id="history" hx-get="/history" hx-trigger="load, sse:snapshot"></aside>
+  <aside id="history"></aside>
   <main id="feed">
     {{if not .Sections}}<p class="empty">Waiting for the first change…</p>{{end}}
     {{template "feed.html" .}}
@@ -37,6 +37,8 @@ applyPrefs();
   <main id="view"></main>
 </div>
 <!-- sibling, not ancestor: keeps hx-vals from leaking into the feed's own requests -->
+<div hx-get="/history" hx-vals="js:{n: hist.querySelectorAll('details[data-key]').length}"
+     hx-trigger="load, sse:snapshot" hx-target="#history"></div>
 <div hx-get="/feed" hx-vals="js:{after: latest()}" hx-trigger="sse:snapshot"
      hx-target="#feed" hx-swap="afterbegin"></div>
 

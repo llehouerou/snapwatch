@@ -6,11 +6,11 @@
 {{range .Node.Files}}<a href="#" hx-get="/file?rev={{$rev}}&path={{.Path}}" hx-target="#view" title="{{.Path}}">
   <b class="st st-{{.Status}}">{{.Status}}</b><span class="path">{{.Name}}</span></a>
 {{end}}{{end}}
-<details open data-key="wt" id="worktree">
+{{if not .Before}}<details open data-key="wt" id="worktree">
   <summary>Working tree <span class="count">{{len .Status}}</span></summary>
   <div class="tree">{{if .Status}}{{template "node" (dict "Rev" "" "Node" (tree .Status))}}{{else}}<p class="empty">clean</p>{{end}}</div>
-</details>
-{{range .Days}}<h3>{{.Label}}</h3>
+</details>{{end}}
+{{$prev := .PrevDay}}{{range $i, $d := .Days}}{{if or $i (ne $d.Label $prev)}}<h3>{{$d.Label}}</h3>{{end}}
 {{range .Commits}}<details data-key="{{.SHA}}">
   <summary class="commit" data-subject="{{.Subject}}" data-body="{{.Body}}"
            data-meta="{{slice .SHA 0 7}} · {{.Author}} · {{.Time.Format "2006-01-02 15:04"}}">
@@ -18,3 +18,4 @@
   <div class="tree">{{template "node" (dict "Rev" .SHA "Node" (tree .Files))}}</div>
 </details>
 {{end}}{{end}}
+{{if .More}}<div class="more" hx-get="/history?before={{.Last}}&day={{.LastDay}}" hx-trigger="intersect once" hx-swap="outerHTML">Loading…</div>{{end}}

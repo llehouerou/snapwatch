@@ -36,6 +36,9 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 // pageSize is how many snapshots one /feed response carries.
 const pageSize = 20
 
+// historyPage is how many commits one /history page carries.
+const historyPage = 50
+
 type Server struct {
 	shadow *Shadow
 	boot   string // identifies this process; pages reload when it changes
@@ -140,9 +143,16 @@ func (sv *Server) page(after, before string, n int) (map[string]any, error) {
 	return page, nil
 }
 
-// history serves the sidebar: pending changes, then the project's commits.
+// history serves the sidebar: pending changes, then the project's commits
+// grouped by day. ?before=<sha>&day=<label> fetches the next page (infinite
+// scroll; the day header is omitted when it continues the previous page);
+// ?n=<count> sizes the first page so a refresh keeps what was loaded.
 func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
-	// group commits by day, newest first, with a human label
+	q := r.URL.Query()
+	n, _ := strconv.Atoi(q.Get("n"))
+	n = max(historyPage, min(n, 5000))
+	before := q.Get("before")
+
 	type day struct {
 		Label   string
 		Commits []Commit
@@ -150,7 +160,8 @@ func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
 	var days []day
 	today := time.Now().Format(time.DateOnly)
 	yesterday := time.Now().AddDate(0, 0, -1).Format(time.DateOnly)
-	for _, c := range sv.shadow.History(100) {
+	commits := sv.shadow.History(before, n)
+	for _, c := range commits {
 		d := c.Time.Format(time.DateOnly)
 		label := d
 		switch d {
@@ -164,10 +175,15 @@ func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
 		}
 		days[len(days)-1].Commits = append(days[len(days)-1].Commits, c)
 	}
-	sv.render(w, "history.html", map[string]any{
-		"Status": sv.shadow.Status(),
-		"Days":   days,
-	})
+	page := map[string]any{"Days": days, "Before": before, "PrevDay": q.Get("day"), "More": len(commits) == n}
+	if before == "" {
+		page["Status"] = sv.shadow.Status()
+	}
+	if len(days) > 0 {
+		last := days[len(days)-1]
+		page["Last"], page["LastDay"] = last.Commits[len(last.Commits)-1].SHA, last.Label
+	}
+	sv.render(w, "history.html", page)
 }
 
 // file serves one file's diff: ?rev=<sha>&path=<p>, or rev empty for the

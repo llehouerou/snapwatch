@@ -154,11 +154,15 @@ type Commit struct {
 	Files                      []Change
 }
 
-// History returns the project's last n commits, newest first, with their
-// files; nil when the project is not a git repository.
-func (s *Shadow) History(n int) []Commit {
-	// records are \x1e-separated; the header ends at \x1f (the body may span lines)
-	out, err := s.project("log", "-n", strconv.Itoa(n), "-M", "--name-status", "--format=%x1e%H%x00%ct%x00%an%x00%s%x00%b%x1f")
+// History returns up to n of the project's commits older than before (from
+// HEAD when before is ""), newest first, with their files; nil when the
+// project is not a git repository or before is the root commit.
+func (s *Shadow) History(before string, n int) []Commit {
+	args := []string{"log", "-n", strconv.Itoa(n), "-M", "--name-status", "--format=%x1e%H%x00%ct%x00%an%x00%s%x00%b%x1f"}
+	if before != "" {
+		args = append(args, before+"~1")
+	}
+	out, err := s.project(args...)
 	if err != nil {
 		return nil
 	}
