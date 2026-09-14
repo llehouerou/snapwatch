@@ -65,13 +65,16 @@ func TestRenderDiff(t *testing.T) {
 
 func TestInlineDiff(t *testing.T) {
 	hl := highlighter("x.go")
-	old, new := inlineDiff("return a+b", "return a + b")
-	if len(old) != 0 || !slices.Equal(new, []span{{8, 9}, {10, 11}}) {
-		t.Fatalf("spaces: %+v %+v", old, new)
+	if old, new := inlineDiff("return a+b", "return a + b"); len(old) != 0 || len(new) != 0 {
+		t.Fatalf("whitespace-only changes should not be marked: %+v %+v", old, new)
 	}
-	got := string(hl("return a + b", new))
-	if strings.Count(got, "<mark>") != 2 || strings.Count(got, "</mark>") != 2 ||
-		strings.Contains(got, "\n") || !strings.HasSuffix(got, "b</span>") {
+	old, new := inlineDiff("return a+b", "return a + c")
+	if len(old) != 1 || !slices.Equal(new, []span{{11, 12}}) {
+		t.Fatalf("word change: %+v %+v", old, new)
+	}
+	got := string(hl("return a + c", new))
+	if strings.Count(got, "<mark>") != 1 || strings.Count(got, "</mark>") != 1 ||
+		strings.Contains(got, "\n") || !strings.HasSuffix(got, "c</span></mark>") {
 		t.Errorf("marked html: %s", got)
 	}
 	// two edits in prose: only the changed words, not the span between them

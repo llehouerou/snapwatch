@@ -152,7 +152,7 @@ func words(s string) []string {
 }
 
 // inlineDiff marks the words that differ between two lines (LCS on tokens), so
-// an added space or a changed word is highlighted without drowning the line.
+// a changed word is highlighted without drowning the line.
 // ponytail: O(n*m) LCS; lines with too many tokens are left unmarked.
 func inlineDiff(old, new string) (o, n []span) {
 	ot, nt := words(old), words(new)
@@ -196,7 +196,7 @@ func spans(toks []string, marked []bool) []span {
 	var out []span
 	off := 0
 	for i, t := range toks {
-		if marked[i] {
+		if marked[i] && strings.TrimSpace(t) != "" { // whitespace-only changes are not worth a mark
 			if len(out) > 0 && out[len(out)-1].B == off {
 				out[len(out)-1].B += len(t)
 			} else {
