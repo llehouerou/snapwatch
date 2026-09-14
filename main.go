@@ -31,14 +31,20 @@ func main() {
 	log.Printf("watching %s (shadow repo %s)", shadow.WorkTree, shadow.GitDir)
 	sv := NewServer(shadow)
 
-	// A snapshot carries the project's commit as its message when HEAD moved
-	// since the previous one; the initial snapshot never does.
-	head := shadow.ProjectHead()
+	// When the project's own git state moved since the previous snapshot, the
+	// snapshot is a marker: "branch <name>" on a switch, else "commit <sha>
+	// <subject>". Its diff is git's doing, not the agent's; the UI folds it.
+	branch, head := shadow.ProjectHead()
 	snap := func() {
 		message := ""
-		if h := shadow.ProjectHead(); h != head {
-			head, message = h, h
+		b, h := shadow.ProjectHead()
+		switch {
+		case b != branch:
+			message = "branch " + b
+		case h != head:
+			message = "commit " + h
 		}
+		branch, head = b, h
 		sha, err := shadow.Snapshot(message)
 		if err != nil {
 			log.Println("snapshot:", err)

@@ -80,25 +80,39 @@ func TestShadow(t *testing.T) {
 		t.Errorf("cumulative diff:\n%s", d)
 	}
 
-	// a project commit: no tree change, but a marker snapshot with a message
-	if h := s.ProjectHead(); h != "" {
-		t.Fatalf("not a git repo yet, got head %q", h)
+	// project git state: none, then a branch + commit, then a branch switch
+	if b, h := s.ProjectHead(); b != "" || h != "" {
+		t.Fatalf("not a git repo yet, got %q %q", b, h)
 	}
-	for _, args := range [][]string{{"init", "-q"}, {"add", "."}, {"-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Add greeting"}} {
-		if out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput(); err != nil {
+	git := func(args ...string) {
+		args = append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "init.defaultBranch=main"}, args...)
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v %s", args, err, out)
 		}
 	}
-	head := s.ProjectHead()
-	if !strings.HasSuffix(head, " Add greeting") {
-		t.Fatalf("project head: %q", head)
+	git("init", "-q")
+	git("add", ".")
+	git("commit", "-qm", "Add greeting")
+	branch, head := s.ProjectHead()
+	if branch != "main" || !strings.HasSuffix(head, " Add greeting") {
+		t.Fatalf("project state: %q %q", branch, head)
 	}
-	mark, err := s.Snapshot(head)
+	git("checkout", "-qb", "feature")
+	if b, _ := s.ProjectHead(); b != "feature" {
+		t.Errorf("after checkout: branch %q", b)
+	}
+	git("checkout", "-q", "--detach")
+	if b, _ := s.ProjectHead(); b != "HEAD" {
+		t.Errorf("detached: branch %q", b)
+	}
+
+	// a marker snapshot: always commits, even without tree changes
+	mark, err := s.Snapshot("commit " + head)
 	if err != nil || mark == "" {
 		t.Fatalf("marker snapshot: %q %v", mark, err)
 	}
 	log, _ = s.Log("", "", 1)
-	if log[0].SHA != mark || log[0].Message != head || log[0].Files != 0 {
+	if log[0].SHA != mark || log[0].Kind != "commit" || log[0].Message != head || log[0].Files != 0 {
 		t.Errorf("marker entry: %+v", log[0])
 	}
 }

@@ -23,11 +23,13 @@ type Shadow struct {
 	WorkTree string
 }
 
-// Entry is one timeline row. Message is empty for plain snapshots and holds
-// "<sha> <subject>" when the snapshot marks a commit made in the project.
+// Entry is one timeline row. Kind is "" for a plain snapshot, "commit" when
+// the project's HEAD moved on the same branch (Message: "<sha> <subject>"),
+// "branch" when it switched branch (Message: the new branch name).
 type Entry struct {
 	SHA     string
 	Time    time.Time
+	Kind    string
 	Message string
 	Files   int
 	Added   int
@@ -108,16 +110,23 @@ func (s *Shadow) Snapshot(message string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// ProjectHead returns "<short sha> <subject>" of the watched project's own
-// HEAD, or "" when the project is not a git repository (or has no commits).
-func (s *Shadow) ProjectHead() string {
-	cmd := exec.Command("git", "-C", s.WorkTree, "log", "-1", "--format=%h %s")
+// ProjectHead describes the watched project's own git state: the current
+// branch ("HEAD" when detached) and "<short sha> <subject>" of its HEAD.
+// Both are "" when the project is not a git repository or has no commits.
+func (s *Shadow) ProjectHead() (branch, head string) {
+	cmd := exec.Command("git", "-C", s.WorkTree, "log", "-1", "--format=%h %s%n%D")
 	cmd.Env = append(os.Environ(), "LC_ALL=C")
 	out, err := cmd.Output()
 	if err != nil {
-		return ""
+		return "", ""
 	}
-	return strings.TrimSpace(string(out))
+	head, refs, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	// %D looks like "HEAD -> main, origin/main" or just "HEAD" when detached
+	branch = "HEAD"
+	if _, b, ok := strings.Cut(refs, "HEAD -> "); ok {
+		branch, _, _ = strings.Cut(b, ",")
+	}
+	return branch, head
 }
 
 // Log returns snapshots newest first: those newer than after, or up to n
@@ -149,7 +158,8 @@ func (s *Shadow) Log(after, before string, n int) ([]Entry, error) {
 		case strings.Contains(line, "\x00"):
 			f := strings.Split(line, "\x00")
 			ts, _ := strconv.ParseInt(f[1], 10, 64)
-			entries = append(entries, Entry{SHA: f[0], Time: time.Unix(ts, 0), Message: f[2]})
+			kind, msg, _ := strings.Cut(f[2], " ")
+			entries = append(entries, Entry{SHA: f[0], Time: time.Unix(ts, 0), Kind: kind, Message: msg})
 		case len(entries) > 0:
 			e := &entries[len(entries)-1]
 			// " 3 files changed, 10 insertions(+), 2 deletions(-)"
