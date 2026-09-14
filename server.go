@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -85,6 +88,7 @@ func (sv *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /feed", sv.feed)
 	mux.HandleFunc("GET /events", sv.events)
 	mux.HandleFunc("GET /history", sv.history)
+	mux.HandleFunc("PUT /prefs", savePrefs)
 	mux.HandleFunc("GET /file", sv.file)
 	mux.HandleFunc("GET /theme/{name}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
@@ -102,6 +106,7 @@ func (sv *Server) index(w http.ResponseWriter, r *http.Request) {
 	}
 	page["Dir"] = sv.shadow.WorkTree
 	page["Name"] = filepath.Base(sv.shadow.WorkTree)
+	page["Prefs"] = loadPrefs()
 	page["Boot"] = sv.boot
 	page["Themes"] = styles.Names()
 	sv.render(w, "index.html", page)
@@ -277,5 +282,38 @@ func (sv *Server) events(w http.ResponseWriter, r *http.Request) {
 func (sv *Server) render(w http.ResponseWriter, name string, data any) {
 	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
 		log.Println("render:", err)
+	}
+}
+
+// Preferences (theme, font, sidebar…) are a JSON blob owned by the page,
+// stored once for all projects and ports in $XDG_CONFIG_HOME/snapwatch/prefs.json.
+func prefsPath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		dir = "."
+	}
+	return filepath.Join(dir, "snapwatch", "prefs.json")
+}
+
+func loadPrefs() template.JS {
+	b, err := os.ReadFile(prefsPath())
+	if err != nil || !json.Valid(b) {
+		return "{}"
+	}
+	return template.JS(b)
+}
+
+func savePrefs(w http.ResponseWriter, r *http.Request) {
+	b, err := io.ReadAll(io.LimitReader(r.Body, 64<<10))
+	if err != nil || !json.Valid(b) {
+		http.Error(w, "invalid JSON", 400)
+		return
+	}
+	p := prefsPath()
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err == nil {
+		err = os.WriteFile(p, b, 0o644)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), 500)
 	}
 }

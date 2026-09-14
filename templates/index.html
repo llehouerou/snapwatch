@@ -7,8 +7,9 @@
 <link rel="stylesheet" href="/static/style.css">
 <link id="theme" rel="stylesheet" href="/theme/monokai.css">
 <script>
-// Preferences live in localStorage; applied before first paint to avoid a flash.
-const prefs = Object.assign({ theme: 'monokai', font: '', size: 13, sidebar: true }, JSON.parse(localStorage.getItem('snapwatch') || '{}'));
+// Preferences are global (one file for every project/port, served by the
+// server) and inlined here so they apply before first paint.
+const prefs = Object.assign({ theme: 'monokai', font: '', size: 13, sidebar: true }, {{.Prefs}});
 function applyPrefs() {
   document.getElementById('theme').href = '/theme/' + prefs.theme + '.css';
   const r = document.documentElement;
@@ -16,7 +17,10 @@ function applyPrefs() {
   r.style.setProperty('--size', prefs.size + 'px');
   r.classList.toggle('nosidebar', !prefs.sidebar);
 }
-function setPref(k, v) { prefs[k] = v; localStorage.setItem('snapwatch', JSON.stringify(prefs)); applyPrefs(); }
+function setPref(k, v) {
+  prefs[k] = v; applyPrefs();
+  fetch('/prefs', { method: 'PUT', body: JSON.stringify(prefs) });
+}
 applyPrefs();
 </script>
 <script src="/static/htmx.min.js"></script>
