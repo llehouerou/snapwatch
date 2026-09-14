@@ -150,6 +150,7 @@ type Change struct {
 // Commit is one entry of the project's own history with its files.
 type Commit struct {
 	SHA, Subject, Body, Author string
+	Ours                       bool // specific to the current branch (not on the main line)
 	Time                       time.Time
 	Files                      []Change
 }
@@ -183,6 +184,24 @@ func (s *Shadow) History(before string, n int) []Commit {
 		commits = append(commits, c)
 	}
 	return commits
+}
+
+// BranchCommits returns the SHAs reachable from HEAD but not from the main
+// line (origin/HEAD, main or master, whichever exists first): the commits
+// that belong to the current branch. Empty on the main line itself.
+func (s *Shadow) BranchCommits() map[string]bool {
+	for _, base := range []string{"origin/HEAD", "main", "master"} {
+		out, err := s.project("rev-list", "HEAD", "^"+base)
+		if err != nil {
+			continue // ref does not exist
+		}
+		ours := make(map[string]bool)
+		for _, sha := range strings.Fields(string(out)) {
+			ours[sha] = true
+		}
+		return ours
+	}
+	return nil
 }
 
 // Status lists the project's uncommitted changes (staged, unstaged, untracked).

@@ -168,6 +168,10 @@ func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
 	today := time.Now().Format(time.DateOnly)
 	yesterday := time.Now().AddDate(0, 0, -1).Format(time.DateOnly)
 	commits := sv.shadow.History(before, n)
+	ours := sv.shadow.BranchCommits()
+	for i := range commits {
+		commits[i].Ours = ours[commits[i].SHA]
+	}
 	for _, c := range commits {
 		d := c.Time.Format(time.DateOnly)
 		label := d
