@@ -1,0 +1,2 @@
+<h2><span class="message">{{if .Rev}}{{slice .Rev 0 7}}{{else}}working tree{{end}}</span> {{.Path}}</h2>
+{{template "diff.html" .Files}}

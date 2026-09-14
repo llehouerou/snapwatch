@@ -110,13 +110,24 @@ func (s *Shadow) Snapshot(message string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// project runs git inside the watched project's own repository.
+func (s *Shadow) project(args ...string) ([]byte, error) {
+	cmd := exec.Command("git", append([]string{"-C", s.WorkTree, "-c", "core.quotepath=off", "-c", "color.ui=false"}, args...)...)
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return out, fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(stderr.String()))
+	}
+	return out, nil
+}
+
 // ProjectHead describes the watched project's own git state: the current
 // branch ("HEAD" when detached) and "<short sha> <subject>" of its HEAD.
 // Both are "" when the project is not a git repository or has no commits.
 func (s *Shadow) ProjectHead() (branch, head string) {
-	cmd := exec.Command("git", "-C", s.WorkTree, "log", "-1", "--format=%h %s%n%D")
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
-	out, err := cmd.Output()
+	out, err := s.project("log", "-1", "--format=%h %s%n%D")
 	if err != nil {
 		return "", ""
 	}
@@ -127,6 +138,84 @@ func (s *Shadow) ProjectHead() (branch, head string) {
 		branch, _, _ = strings.Cut(b, ",")
 	}
 	return branch, head
+}
+
+// Change is one file touched by a commit or pending in the working tree.
+// Status is git's letter: A, M, D, R (renamed), ? (untracked).
+type Change struct {
+	Status, Path string
+}
+
+// Commit is one entry of the project's own history with its files.
+type Commit struct {
+	SHA, Subject string
+	Time         time.Time
+	Files        []Change
+}
+
+// History returns the project's last n commits, newest first, with their
+// files; nil when the project is not a git repository.
+func (s *Shadow) History(n int) []Commit {
+	out, err := s.project("log", "-n", strconv.Itoa(n), "-M", "--name-status", "--format=%x00%H%x00%ct%x00%s")
+	if err != nil {
+		return nil
+	}
+	var commits []Commit
+	for _, line := range strings.Split(string(out), "\n") {
+		switch {
+		case line == "":
+		case line[0] == 0:
+			f := strings.Split(line, "\x00")
+			ts, _ := strconv.ParseInt(f[2], 10, 64)
+			commits = append(commits, Commit{SHA: f[1], Time: time.Unix(ts, 0), Subject: f[3]})
+		case len(commits) > 0:
+			// "M\tpath" or "R100\told\tnew"
+			f := strings.Split(line, "\t")
+			c := &commits[len(commits)-1]
+			c.Files = append(c.Files, Change{Status: f[0][:1], Path: f[len(f)-1]})
+		}
+	}
+	return commits
+}
+
+// Status lists the project's uncommitted changes (staged, unstaged, untracked).
+func (s *Shadow) Status() []Change {
+	out, err := s.project("status", "--porcelain=v1", "-uall")
+	if err != nil {
+		return nil
+	}
+	var changes []Change
+	for _, line := range strings.Split(string(out), "\n") {
+		if len(line) < 4 {
+			continue
+		}
+		// "XY path" or "R  old -> new"; X is the index status, Y the work tree
+		st, path := strings.TrimSpace(line[:2]), line[3:]
+		if _, newPath, ok := strings.Cut(path, " -> "); ok {
+			path = newPath
+		}
+		changes = append(changes, Change{Status: st[:1], Path: path})
+	}
+	return changes
+}
+
+// FileDiff returns the unified diff of one file: in commit rev, or against
+// HEAD in the working tree when rev is "" (untracked files diff from nothing).
+func (s *Shadow) FileDiff(rev, path string) (string, error) {
+	if rev != "" {
+		out, err := s.project("show", "--format=", "-M", rev, "--", path)
+		return string(out), err
+	}
+	out, err := s.project("diff", "HEAD", "--", path)
+	if err == nil && len(out) == 0 {
+		// not tracked: diff --no-index exits 1 when the file has content
+		out, err = s.project("diff", "--no-index", "--", "/dev/null", path)
+		var exit *exec.ExitError
+		if errors.As(err, &exit) && exit.ExitCode() == 1 {
+			err = nil
+		}
+	}
+	return string(out), err
 }
 
 // Log returns snapshots newest first: those newer than after, or up to n

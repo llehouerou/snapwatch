@@ -21,7 +21,16 @@ var templateFS embed.FS
 //go:embed static
 var staticFS embed.FS
 
-var tmpl = template.Must(template.ParseFS(templateFS, "templates/*.html"))
+var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
+	// dict builds a map for passing several values to a sub-template
+	"dict": func(kv ...any) map[string]any {
+		m := make(map[string]any, len(kv)/2)
+		for i := 0; i+1 < len(kv); i += 2 {
+			m[kv[i].(string)] = kv[i+1]
+		}
+		return m
+	},
+}).ParseFS(templateFS, "templates/*.html"))
 
 // pageSize is how many snapshots one /feed response carries.
 const pageSize = 20
@@ -70,6 +79,8 @@ func (sv *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", sv.index)
 	mux.HandleFunc("GET /feed", sv.feed)
 	mux.HandleFunc("GET /events", sv.events)
+	mux.HandleFunc("GET /history", sv.history)
+	mux.HandleFunc("GET /file", sv.file)
 	mux.HandleFunc("GET /theme/{name}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.Header().Set("Cache-Control", "max-age=86400")
@@ -126,6 +137,49 @@ func (sv *Server) page(after, before string, n int) (map[string]any, error) {
 		page["Last"] = entries[len(entries)-1].SHA
 	}
 	return page, nil
+}
+
+// history serves the sidebar: pending changes, then the project's commits.
+func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
+	sv.render(w, "history.html", map[string]any{
+		"Status":  sv.shadow.Status(),
+		"Commits": sv.shadow.History(100),
+	})
+}
+
+// file serves one file's diff: ?rev=<sha>&path=<p>, or rev empty for the
+// working tree. Commit diffs are immutable and memoised; working tree is not.
+func (sv *Server) file(w http.ResponseWriter, r *http.Request) {
+	rev, path := r.URL.Query().Get("rev"), r.URL.Query().Get("path")
+	key := rev + ":" + path
+	if rev != "" {
+		if h, ok := sv.cache.Get(key); ok {
+			w.Write([]byte(h))
+			return
+		}
+	}
+	unified, err := sv.shadow.FileDiff(rev, path)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	files, err := RenderDiff(unified)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	for i := range files {
+		files[i].Big = false // asked for explicitly: never fold
+	}
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, "file.html", map[string]any{"Rev": rev, "Path": path, "Files": files}); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if rev != "" {
+		sv.cache.Put(key, template.HTML(buf.String()))
+	}
+	w.Write(buf.Bytes())
 }
 
 // diff renders (and memoises) the side-by-side HTML of one snapshot.
