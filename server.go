@@ -31,13 +31,6 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		return m
 	},
 	"tree": Tree,
-	// when shows only the time for today's timestamps
-	"when": func(t time.Time) string {
-		if t.Format(time.DateOnly) == time.Now().Format(time.DateOnly) {
-			return t.Format("15:04")
-		}
-		return t.Format("01-02 15:04")
-	},
 }).ParseFS(templateFS, "templates/*.html"))
 
 // pageSize is how many snapshots one /feed response carries.
@@ -149,9 +142,31 @@ func (sv *Server) page(after, before string, n int) (map[string]any, error) {
 
 // history serves the sidebar: pending changes, then the project's commits.
 func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
+	// group commits by day, newest first, with a human label
+	type day struct {
+		Label   string
+		Commits []Commit
+	}
+	var days []day
+	today := time.Now().Format(time.DateOnly)
+	yesterday := time.Now().AddDate(0, 0, -1).Format(time.DateOnly)
+	for _, c := range sv.shadow.History(100) {
+		d := c.Time.Format(time.DateOnly)
+		label := d
+		switch d {
+		case today:
+			label = "Today"
+		case yesterday:
+			label = "Yesterday"
+		}
+		if len(days) == 0 || days[len(days)-1].Label != label {
+			days = append(days, day{Label: label})
+		}
+		days[len(days)-1].Commits = append(days[len(days)-1].Commits, c)
+	}
 	sv.render(w, "history.html", map[string]any{
-		"Status":  sv.shadow.Status(),
-		"Commits": sv.shadow.History(100),
+		"Status": sv.shadow.Status(),
+		"Days":   days,
 	})
 }
 
