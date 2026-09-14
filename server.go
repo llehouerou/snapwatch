@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,6 +101,7 @@ func (sv *Server) index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page["Dir"] = sv.shadow.WorkTree
+	page["Name"] = filepath.Base(sv.shadow.WorkTree)
 	page["Boot"] = sv.boot
 	page["Themes"] = styles.Names()
 	sv.render(w, "index.html", page)
