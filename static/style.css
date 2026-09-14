@@ -60,14 +60,15 @@ aside .tools button:hover { color: var(--fg); }
   flex: 1; overflow: auto;
 }
 #history > details { border-bottom: 1px solid var(--line); }
-#worktree { background: var(--bg); border-bottom: 4px solid var(--line); margin-bottom: 8px; }
-#worktree > summary { color: var(--commit); }
-#history summary.tipped { background: var(--line); box-shadow: inset 3px 0 0 var(--commit); }
-#history h3 {
+#history h3, #worktree > summary {
   position: sticky; top: 0; z-index: 1; margin: 0; padding: 5px 8px; background: var(--line);
   font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: .1em; color: var(--fg);
   box-shadow: inset 3px 0 0 var(--branch), 0 1px 0 var(--bg);
 }
+#worktree { background: var(--bg); border-bottom: 4px solid var(--line); margin-bottom: 8px; }
+#worktree > summary { color: var(--commit); box-shadow: inset 3px 0 0 var(--commit), 0 1px 0 var(--bg); }
+#worktree .branch { float: right; text-transform: none; letter-spacing: 0; color: var(--branch); }
+#history summary.tipped { background: var(--line); box-shadow: inset 3px 0 0 var(--commit); }
 #history summary {
   padding: 4px 8px; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

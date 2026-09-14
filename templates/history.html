@@ -7,7 +7,7 @@
   <b class="st st-{{.Status}}">{{.Status}}</b><span class="path">{{.Name}}</span></a>
 {{end}}{{end}}
 {{if not .Before}}<details open data-key="wt" id="worktree">
-  <summary>Working tree <span class="count">{{len .Status}}</span></summary>
+  <summary>Working tree <span class="count">{{len .Status}}</span>{{if .Branch}}<span class="branch" title="current branch">⎇ {{.Branch}}</span>{{end}}</summary>
   <div class="tree">{{if .Status}}{{template "node" (dict "Rev" "" "Node" (tree .Status))}}{{else}}<p class="empty">clean</p>{{end}}</div>
 </details>{{end}}
 {{$prev := .PrevDay}}{{range $i, $d := .Days}}{{if or $i (ne $d.Label $prev)}}<h3>{{$d.Label}}</h3>{{end}}

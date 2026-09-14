@@ -178,6 +178,7 @@ func (sv *Server) history(w http.ResponseWriter, r *http.Request) {
 	page := map[string]any{"Days": days, "Before": before, "PrevDay": q.Get("day"), "More": len(commits) == n}
 	if before == "" {
 		page["Status"] = sv.shadow.Status()
+		page["Branch"], _ = sv.shadow.ProjectHead()
 	}
 	if len(days) > 0 {
 		last := days[len(days)-1]
