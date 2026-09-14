@@ -39,16 +39,25 @@ main { flex: 1; min-width: 0; overflow: auto; padding: 0 6px 24px; }
 #feed section ~ .empty { display: none; }
 /* file view replaces the feed; sidebar toggles */
 #back, #view { display: none; }
-.viewing #back { display: inline; }
+.viewing #back { display: inline; color: var(--branch); font-size: 12px; }
 .viewing #view { display: block; }
 .viewing #feed { display: none; }
-.nosidebar #history { display: none; }
+.nosidebar aside { display: none; }
 #view > h2 { font-size: 13px; margin: 8px 0; color: var(--dim); }
 #view > h2 .message { color: var(--commit); }
 
+aside {
+  width: 280px; flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--line); background: var(--bg2); font-size: 12px;
+}
+aside .tools {
+  flex: none; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px;
+  border-bottom: 1px solid var(--line); color: var(--dim); font-size: 11px;
+}
+aside .tools button { background: none; border: 1px solid var(--line); border-radius: 3px; color: var(--dim); cursor: pointer; font: inherit; padding: 1px 6px; }
+aside .tools button:hover { color: var(--fg); }
 #history {
-  width: 280px; flex: none; overflow: auto; border-right: 1px solid var(--line); background: var(--bg2);
-  font-size: 12px;
+  flex: 1; overflow: auto;
 }
 #history > details { border-bottom: 1px solid var(--line); }
 #worktree { background: var(--bg); border-bottom: 4px solid var(--line); margin-bottom: 8px; }

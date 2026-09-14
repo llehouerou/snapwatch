@@ -26,12 +26,16 @@ applyPrefs();
 <header>
   <a class="logo" href="/" title="snapwatch"><img src="/static/logo.svg" alt=""> snapwatch</a>
   <button onclick="setPref('sidebar', !prefs.sidebar)" title="Toggle history (h)">☰</button>
-  <button id="back" onclick="hideView()" title="Back to feed (Esc)">← feed</button>
+  <button id="back" onclick="hideView()">← Esc or click to go back to the feed</button>
   <span title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></span>
   <button onclick="settings.showModal()" title="Settings">⚙</button>
 </header>
 <div class="split">
-  <aside id="history"></aside>
+  <aside>
+    <div class="tools"><span>History</span>
+      <button onclick="hist.querySelectorAll('details[data-key]:not([data-key=wt])').forEach(d => d.open = false)" title="Collapse all commits">⊟ collapse all</button></div>
+    <div id="history"></div>
+  </aside>
   <main id="feed">
     {{if not .Sections}}<p class="empty">Waiting for the first change…</p>{{end}}
     {{template "feed.html" .}}
