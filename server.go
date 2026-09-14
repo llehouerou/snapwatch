@@ -42,6 +42,13 @@ func NewServer(s *Shadow) *Server {
 	return &Server{shadow: s, boot: strconv.FormatInt(time.Now().UnixNano(), 36), subs: make(map[chan string]struct{})}
 }
 
+// Connected reports whether at least one browser tab is listening.
+func (sv *Server) Connected() bool {
+	sv.mu.Lock()
+	defer sv.mu.Unlock()
+	return len(sv.subs) > 0
+}
+
 // Broadcast pushes a new snapshot SHA to every SSE client.
 func (sv *Server) Broadcast(sha string) {
 	sv.mu.Lock()

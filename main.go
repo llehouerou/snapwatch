@@ -48,7 +48,13 @@ func main() {
 	url := "http://" + *addr
 	log.Println("listening on", url)
 	if *open {
-		_ = exec.Command("xdg-open", url).Start()
+		// An already-open tab reconnects its SSE within ~500ms of a restart;
+		// only spawn a new one when nobody shows up.
+		time.AfterFunc(1500*time.Millisecond, func() {
+			if !sv.Connected() {
+				_ = exec.Command("xdg-open", url).Start()
+			}
+		})
 	}
 	log.Fatal(http.ListenAndServe(*addr, sv.Handler()))
 }
