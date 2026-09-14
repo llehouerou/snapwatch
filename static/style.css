@@ -24,12 +24,13 @@ dialog input, dialog select, dialog button {
 }
 dialog form > button { justify-self: end; cursor: pointer; }
 #tip {
+  max-height: 50vh; overflow: auto;
   position: fixed; margin: 0; inset: auto; max-width: 520px; padding: 8px 10px;
   background: var(--bg2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
   box-shadow: 0 4px 16px #0006; font: inherit; font-size: 12px;
 }
 #tip b { display: block; margin-bottom: 4px; }
-#tip pre { margin: 0 0 6px; white-space: pre-wrap; word-break: break-word; font: inherit; color: var(--fg); max-height: 50vh; overflow: auto; }
+#tip pre { margin: 0 0 6px; white-space: pre-wrap; word-break: break-word; font: inherit; color: var(--fg); }
 #tip small { color: var(--dim); font-size: 11px; }
 .split { flex: 1; display: flex; min-height: 0; }
 main { flex: 1; min-width: 0; overflow: auto; padding: 0 6px 24px; }
@@ -50,6 +51,7 @@ main { flex: 1; min-width: 0; overflow: auto; padding: 0 6px 24px; }
 #history > details { border-bottom: 1px solid var(--line); }
 #worktree { background: var(--bg); border-bottom: 4px solid var(--line); margin-bottom: 8px; }
 #worktree > summary { color: var(--commit); }
+#history summary.tipped { background: var(--line); box-shadow: inset 3px 0 0 var(--commit); }
 #history h3 {
   position: sticky; top: 0; z-index: 1; margin: 0; padding: 3px 8px; background: var(--bg2);
   font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: .08em; color: var(--dim);

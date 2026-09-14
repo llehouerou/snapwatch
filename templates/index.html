@@ -74,19 +74,23 @@ const hist = document.getElementById('history');
 // It stays open while the mouse is over the summary or the tooltip itself, so
 // long messages can be scrolled; hiding is delayed to survive the gap between them.
 let tipTimer;
-function hideTip() { tipTimer = setTimeout(() => tip.hidePopover(), 200); }
+function hideTip() {
+  tipTimer = setTimeout(() => { tip.hidePopover(); hist.querySelector('.tipped')?.classList.remove('tipped'); }, 200);
+}
 hist.addEventListener('mouseover', e => {
   const s = e.target.closest('summary.commit');
   if (!s || s.contains(e.relatedTarget)) return;
   clearTimeout(tipTimer);
+  hist.querySelector('.tipped')?.classList.remove('tipped');
+  s.classList.add('tipped'); // the header this tooltip belongs to
   tip.querySelector('b').textContent = s.dataset.subject;
   tip.querySelector('pre').textContent = s.dataset.body.length > 5000 ? s.dataset.body.slice(0, 5000) + '…' : s.dataset.body;
   tip.querySelector('pre').hidden = !s.dataset.body;
   tip.querySelector('small').textContent = s.dataset.meta;
   const r = s.getBoundingClientRect();
-  tip.style.left = r.right + 4 + 'px';
-  tip.style.top = Math.min(r.top, innerHeight - 320) + 'px';
-  tip.showPopover();
+  tip.showPopover(); // show first: its size is needed to keep it on screen
+  tip.style.left = Math.max(8, Math.min(r.right + 4, innerWidth - tip.offsetWidth - 8)) + 'px';
+  tip.style.top = Math.max(8, Math.min(r.top, innerHeight - tip.offsetHeight - 8)) + 'px';
 });
 hist.addEventListener('mouseout', e => {
   const s = e.target.closest('summary.commit');
