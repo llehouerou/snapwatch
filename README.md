@@ -81,6 +81,13 @@ prints (it opens a tab for you unless `--open=false`). That's it.
 | `--open` | `true` | open the browser at startup (skipped if a tab is already connected) |
 | `--version` | | print the version and exit |
 
+One snapwatch per directory — two of them would commit into the same shadow
+repo and corrupt each other. Starting a second one on a directory hands the
+session to the **more recently built binary**: it terminates the running
+instance and takes over, an older one refuses to start. So a `go run` dev
+build always wins over an installed release, and never loses the session back
+to it.
+
 ### In the browser
 
 | Key / control | Action |

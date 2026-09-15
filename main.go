@@ -36,6 +36,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := shadow.Claim(); err != nil {
+		log.Fatal(err)
+	}
 	log.Printf("watching %s (shadow repo %s)", shadow.WorkTree, shadow.GitDir)
 	sv := NewServer(shadow)
 

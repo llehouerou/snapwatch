@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -65,6 +68,71 @@ func OpenShadow(dir string) (*Shadow, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+// Claim makes this process the only snapwatch watching the directory: two of
+// them committing into the same shadow repo corrupt each other's snapshots.
+// The most recently built executable wins — it terminates the running one and
+// takes over; an older one refuses to start. A dev build (`go run`, watchexec)
+// is compiled seconds ago, so it always beats an installed release; a Nix
+// binary has a 1970 mtime and never steals the session back.
+func (s *Shadow) Claim() error {
+	path := filepath.Join(s.GitDir, "snapwatch.lock")
+	stamp := exeStamp()
+	var other struct {
+		PID   int
+		Stamp int64
+	}
+	if b, err := os.ReadFile(path); err == nil && json.Unmarshal(b, &other) == nil &&
+		other.PID != os.Getpid() && alive(other.PID) {
+		if other.Stamp > stamp {
+			return fmt.Errorf("%s is already watched by a more recent snapwatch (pid %d)", s.WorkTree, other.PID)
+		}
+		p, err := os.FindProcess(other.PID)
+		if err != nil {
+			return err
+		}
+		if err := p.Signal(syscall.SIGTERM); err != nil {
+			return err
+		}
+		// Wait for it to go: it still holds the listen socket and may be mid-commit.
+		for i := 0; alive(other.PID); i++ {
+			if i > 100 {
+				return fmt.Errorf("snapwatch pid %d will not stop", other.PID)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		log.Printf("took over from snapwatch pid %d", other.PID)
+	}
+	b, err := json.Marshal(struct {
+		PID   int
+		Stamp int64
+	}{os.Getpid(), stamp})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
+}
+
+// exeStamp is this binary's build time (its mtime), 0 when unknown.
+func exeStamp() int64 {
+	exe, err := os.Executable()
+	if err != nil {
+		return 0
+	}
+	st, err := os.Stat(exe)
+	if err != nil {
+		return 0
+	}
+	return st.ModTime().UnixNano()
+}
+
+func alive(pid int) bool {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	return p.Signal(syscall.Signal(0)) == nil
 }
 
 func (s *Shadow) git(args ...string) ([]byte, error) {

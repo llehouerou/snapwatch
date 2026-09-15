@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -137,5 +139,50 @@ func TestTree(t *testing.T) {
 	}
 	if f := src.Dirs[0].Files; len(f) != 2 || f[0].Name != "App.java" || f[0].Path != "src/main/java/App.java" || f[0].Status != "M" {
 		t.Errorf("main/java files: %+v", f)
+	}
+}
+
+// A live lock from a more recent build blocks us; an older one gets killed.
+func TestClaim(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	s, err := OpenShadow(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	lockPath := filepath.Join(s.GitDir, "snapwatch.lock")
+	// Reaped in the background: a zombie still answers signal 0, and Claim
+	// waits for the process to be gone, not merely killed.
+	holder := func(stamp int64) int {
+		c := exec.Command("sleep", "30")
+		if err := c.Start(); err != nil {
+			t.Fatal(err)
+		}
+		go func() { _ = c.Wait() }()
+		t.Cleanup(func() { _ = c.Process.Kill() })
+		b, _ := json.Marshal(map[string]any{"PID": c.Process.Pid, "Stamp": stamp})
+		if err := os.WriteFile(lockPath, b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return c.Process.Pid
+	}
+
+	newer := holder(exeStamp() + 1)
+	if err := s.Claim(); err == nil {
+		t.Fatal("claimed a directory held by a more recent build")
+	}
+	if !alive(newer) {
+		t.Error("the more recent build was killed")
+	}
+
+	older := holder(exeStamp() - 1)
+	if err := s.Claim(); err != nil {
+		t.Fatalf("takeover: %v", err)
+	}
+	if alive(older) {
+		t.Error("the older build is still running")
+	}
+	b, err := os.ReadFile(lockPath)
+	if err != nil || !strings.Contains(string(b), strconv.Itoa(os.Getpid())) {
+		t.Errorf("lock not ours: %s %v", b, err)
 	}
 }
