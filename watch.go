@@ -12,7 +12,12 @@ import (
 
 // skipDirs mirrors the shadow repo's info/exclude for directories: we don't
 // even watch them, so a `cargo build` doesn't flood the debounce timer.
-var skipDirs = map[string]bool{".git": true, ".jj": true, "node_modules": true, "target": true, ".direnv": true}
+var skipDirs = map[string]bool{
+	".git": true, ".jj": true, ".direnv": true, "node_modules": true, "target": true,
+	".venv": true, "venv": true, "__pycache__": true, ".pytest_cache": true,
+	".mypy_cache": true, ".ruff_cache": true, "dist": true, "build": true,
+	".next": true, ".nuxt": true, ".cache": true, "coverage": true,
+}
 
 // Watch recursively watches dir and calls snap after debounce of quiet time
 // following the last event. Blocks forever; snap is never called concurrently.

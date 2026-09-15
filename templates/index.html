@@ -78,8 +78,8 @@ applyPrefs();
 <dialog id="help">
   <form method="dialog">
     <table class="keys">
-      <tr><th>j</th><th>k</th><td>next / previous snapshot</td></tr>
-      <tr><th>]</th><th>[</th><td>next / previous file</td></tr>
+      <tr><th>j</th><th>k</th><td>next / previous snapshot — hunk, in a file view</td></tr>
+      <tr><th>]</th><th>[</th><td>next / previous file — hunk, in a file view</td></tr>
       <tr><th>g</th><th>G</th><td>top / bottom</td></tr>
       <tr><th>c</th><th></th><td>fold or unfold every file</td></tr>
       <tr><th>/</th><th></th><td>filter files by path (<code>src/ !_test</code>)</td></tr>
@@ -121,11 +121,14 @@ if (new URLSearchParams(location.search).has('path')) htmx.ajax('GET', '/file' +
 // ([/]). Targets are the visible ones only, so the filter narrows what j/k walk
 // through; scroll-margin-top keeps them clear of the sticky timestamp.
 const SNAPSHOTS = 'section:not([hidden])', BLOCKS = 'section:not([hidden]) details[data-path]:not([hidden])';
+// A file view holds one file, so there is nothing to walk but its hunks.
+const HUNKS = 'tr.hunk';
 function step(sel, dir) {
-  const els = [...feed.querySelectorAll(sel)];
-  // distance to where scrollIntoView would park the element: the feed's top edge,
+  const p = pane();
+  const els = [...p.querySelectorAll(p === view ? HUNKS : sel)];
+  // distance to where scrollIntoView would park the element: the pane's top edge,
   // plus its scroll-margin. 0 means "this one is the current target".
-  const base = feed.getBoundingClientRect().top;
+  const base = p.getBoundingClientRect().top;
   const tops = els.map(e => e.getBoundingClientRect().top - base - parseFloat(getComputedStyle(e).scrollMarginTop));
   // forward: the first one still below the top edge; back: the last one that started above it
   const el = dir > 0 ? els[tops.findIndex(y => y > 1)] : els[tops.filter(y => y < -1).length - 1];

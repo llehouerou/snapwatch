@@ -130,7 +130,10 @@ your project ─fsnotify─▶ debounce ─▶ git add -A && git commit  (shadow
 
 - **Shadow repo** — `git --git-dir=$XDG_DATA_HOME/snapwatch/<hash>
   --work-tree=<dir>`. Your project's `.gitignore` is honoured; `.git/`,
-  `node_modules/`, `target/`, `.direnv/`, `*.log` are always excluded.
+  `node_modules/`, `target/`, `dist/`, `build/`, `.venv/`, `__pycache__/` and
+  the other usual generated directories are always excluded — which is what
+  saves the projects that have no `.gitignore`. Every 200 snapshots the shadow
+  repo packs itself (`git gc`), since plumbing commands never do it.
 - **Markers** — when the project's own `HEAD` moves between two snapshots,
   the snapshot is committed with a message (`commit <sha> <subject>` or
   `branch <name>`); that's all the feed needs to render it differently.

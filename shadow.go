@@ -18,14 +18,25 @@ import (
 	"time"
 )
 
-const excludes = ".git/\n.jj/\nnode_modules/\ntarget/\nresult\n.direnv/\n*.log\n"
+// excludes are the generated directories worth never snapshotting. A project
+// with a .gitignore already hides most of them; this is what saves the ones
+// without, which is half of what snapwatch watches.
+const excludes = ".git/\n.jj/\nnode_modules/\ntarget/\nresult\n.direnv/\n*.log\n" +
+	".venv/\nvenv/\n__pycache__/\n.pytest_cache/\n.mypy_cache/\n.ruff_cache/\n" +
+	"dist/\nbuild/\n.next/\n.nuxt/\n.cache/\ncoverage/\n"
 
 // Shadow is a bare-ish git repo living outside the watched directory, used as
 // snapshot storage: --git-dir points at the shadow, --work-tree at the project.
 type Shadow struct {
 	GitDir   string
 	WorkTree string
+	snaps    int // commits taken; only the snapshot goroutine touches it
 }
+
+// gcEvery is how many snapshots pass between two packs. `gc --auto` is no help:
+// it estimates the loose objects from one directory out of 256, so a few
+// hundred spread thin never cross any threshold and nothing is ever packed.
+const gcEvery = 200
 
 // Entry is one timeline row. Kind is "" for a plain snapshot, "commit" when
 // the project's HEAD moved on the same branch (Message: "<sha> <subject>"),
@@ -178,6 +189,12 @@ func (s *Shadow) Snapshot(message string) (string, error) {
 	out, err := s.git("rev-parse", "HEAD")
 	if err != nil {
 		return "", err
+	}
+	// Snapshots are pure plumbing, and plumbing never packs: one repo sat on 411
+	// loose objects for 22 MiB that `git gc` folded into 24 MiB total in 0.8s.
+	// In the background, since nothing waits on it.
+	if s.snaps++; s.snaps%gcEvery == 0 {
+		go func() { _, _ = s.git("gc", "--quiet") }()
 	}
 	return strings.TrimSpace(string(out)), nil
 }
