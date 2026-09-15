@@ -1,6 +1,6 @@
 {{if not .}}<p class="empty">No changes.</p>{{end}}
 {{range .}}
-<details{{if not .Big}} open{{end}}>
+<details data-path="{{.Path}}"{{if not .Big}} open{{end}}>
   <summary>
     {{if .OldPath}}<span class="old">{{.OldPath}}</span> → {{end}}{{.Path}}
     {{if .Added}}<b class="tag">added</b>{{else if .Deleted}}<b class="tag">deleted</b>{{else if .OldPath}}<b class="tag">renamed</b>{{end}}

@@ -31,6 +31,7 @@ applyPrefs();
   <a class="logo" href="/" title="snapwatch"><img src="/static/logo.svg" alt=""> snapwatch</a>
   <button onclick="setPref('sidebar', !prefs.sidebar)" title="Toggle history (h)">☰</button>
   <button id="back" onclick="hideView()">← Esc or click to go back to the feed</button>
+  <input id="filter" placeholder="filter files… (src/ !_test)" title="Space-separated substrings a path must contain; !term excludes" oninput="applyFilter()">
   <span title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></span>
   <button onclick="settings.showModal()" title="Settings">⚙</button>
 </header>
@@ -73,6 +74,23 @@ applyPrefs();
 </dialog>
 <script>
 function latest() { const s = document.querySelector('#feed section'); return s ? s.dataset.sha : ''; }
+// path filter: hide file blocks whose path misses a term (!term excludes), and
+// snapshots left with nothing to show. Markers (no files) always stay.
+function applyFilter() {
+  // `*` is dropped, not honoured: terms are substrings, so *.go and .go are the same filter
+  const terms = filter.value.toLowerCase().replaceAll('*', '').split(/\s+/).filter(Boolean);
+  const ok = p => terms.every(t => t[0] === '!' ? !p.includes(t.slice(1)) : p.includes(t));
+  for (const s of feed.querySelectorAll('section')) {
+    const files = s.querySelectorAll('details[data-path]');
+    let shown = 0;
+    for (const d of files) {
+      d.hidden = !ok(d.dataset.path.toLowerCase());
+      shown += !d.hidden;
+    }
+    s.hidden = files.length > 0 && shown === 0;
+  }
+}
+feed.addEventListener('htmx:afterSwap', applyFilter); // new snapshots and older pages
 // file view over the feed: shown when #view receives content, hidden with Esc / the back button
 // The URL mirrors the view (/?rev=…&path=…) so a reload or a shared link lands on the same file.
 function hideView() { document.documentElement.classList.remove('viewing'); history.replaceState(null, '', '/'); }

@@ -93,6 +93,7 @@ to it.
 | Key / control | Action |
 |---|---|
 | click a file in the sidebar | show that file's diff (commit or working tree) |
+| type in `filter files…` | keep only files whose path contains every term; `!term` excludes |
 | `Esc` or `← Esc or click…` | back to the feed |
 | `h` or `☰` | toggle the history sidebar |
 | `⊟ collapse all` | fold every commit in the sidebar |
