@@ -38,8 +38,9 @@ and not required at all.
   file churn caused by a checkout is folded away instead of shown as "changes".
 - **History sidebar** — the working tree's pending changes, then the project's
   commit log grouped by day, files as a tree. Click a file to see its diff for
-  that commit or against `HEAD`; commits that only exist on the current branch
-  are marked. Hover a commit for its full message.
+  that commit or against `HEAD`; commits not on the main line yet — a feature
+  branch's own, or on `main` the ones you haven't pushed — carry a `⎇`, which
+  clears as soon as you push. Hover a commit for its full message.
 - **Zero setup** — one static binary, no config file, no build step, no
   external services. Snapshots live in `$XDG_DATA_HOME/snapwatch/`.
 - **Yours to style** — 70+ colour themes (Catppuccin, Dracula, Nord,

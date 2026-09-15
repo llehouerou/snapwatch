@@ -257,11 +257,15 @@ func (s *Shadow) History(before string, n int) []Commit {
 	return commits
 }
 
+// mainLine is the ref the branch markers are measured against: the remote's
+// default branch when the repo has one, else a local main or master.
+var mainLine = []string{"origin/HEAD", "main", "master"}
+
 // BranchCommits returns the SHAs reachable from HEAD but not from the main
-// line (origin/HEAD, main or master, whichever exists first): the commits
-// that belong to the current branch. Empty on the main line itself.
+// line: the commits that are yours and not on it yet. On the main line itself
+// those are the commits you have not pushed.
 func (s *Shadow) BranchCommits() map[string]bool {
-	for _, base := range []string{"origin/HEAD", "main", "master"} {
+	for _, base := range mainLine {
 		out, err := s.project("rev-list", "HEAD", "^"+base)
 		if err != nil {
 			continue // ref does not exist
@@ -273,6 +277,18 @@ func (s *Shadow) BranchCommits() map[string]bool {
 		return ours
 	}
 	return nil
+}
+
+// MainLine is where that base points right now. A push (or a fetch) moves it
+// without touching the work tree, so watching it is how the markers clear.
+func (s *Shadow) MainLine() string {
+	for _, base := range mainLine {
+		out, err := s.project("rev-parse", "--verify", "--quiet", base)
+		if err == nil {
+			return strings.TrimSpace(string(out))
+		}
+	}
+	return ""
 }
 
 // Status lists the project's uncommitted changes (staged, unstaged, untracked).

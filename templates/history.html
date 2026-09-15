@@ -11,7 +11,7 @@
   <div class="tree">{{if .Status}}{{template "node" (dict "Rev" "" "Node" (tree .Status))}}{{else}}<p class="empty">clean</p>{{end}}</div>
 </details>{{end}}
 {{$prev := .PrevDay}}{{range $i, $d := .Days}}{{if or $i (ne $d.Label $prev)}}<h3>{{$d.Label}}</h3>{{end}}
-{{range .Commits}}<details data-key="{{.SHA}}"{{if .Ours}} class="ours" title="on this branch only"{{end}}>
+{{range .Commits}}<details data-key="{{.SHA}}"{{if .Ours}} class="ours" title="not on the main line yet"{{end}}>
   <summary class="commit" data-subject="{{.Subject}}" data-body="{{.Body}}"
            data-meta="{{slice .SHA 0 7}} · {{.Author}} · {{.Time.Format "2006-01-02 15:04"}}">
     <time>{{.Time.Format "15:04"}}</time> {{.Subject}}</summary>

@@ -59,6 +59,7 @@ func main() {
 	// ponytail: a pull/reset on the same branch shows as work too; compare the
 	// new HEAD's committer time with now if that gets annoying.
 	branch, head := shadow.ProjectHead()
+	main := shadow.MainLine()
 	snap := func() {
 		message := ""
 		b, h := shadow.ProjectHead()
@@ -68,15 +69,23 @@ func main() {
 		case h != head:
 			message = "commit " + h
 		}
-		branch, head = b, h
+		m := shadow.MainLine()
+		pushed := m != main
+		branch, head, main = b, h, m
 		sha, err := shadow.Snapshot(message)
 		if err != nil {
 			log.Println("snapshot:", err)
 			return
 		}
-		if sha != "" {
+		switch {
+		case sha != "":
 			log.Println("snapshot", sha[:8], message)
 			sv.Broadcast(sha)
+		case pushed:
+			// A push or fetch changes no file: nothing to snapshot, but the
+			// sidebar's branch markers are stale until it reloads.
+			log.Println("main line now", m[:min(8, len(m))])
+			sv.Broadcast("")
 		}
 	}
 	snap()
