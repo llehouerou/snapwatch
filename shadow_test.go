@@ -142,7 +142,9 @@ func TestTree(t *testing.T) {
 	}
 }
 
-// A live lock from a more recent build blocks us; an older one gets killed.
+// A live lock from a more recent build blocks us and hands back its address;
+// an older one gets killed. Equal builds (two Nix binaries, both mtime 1970)
+// go to the newcomer, which is how an update takes over.
 func TestClaim(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	s, err := OpenShadow(t.TempDir())
@@ -152,37 +154,47 @@ func TestClaim(t *testing.T) {
 	lockPath := filepath.Join(s.GitDir, "snapwatch.lock")
 	// Reaped in the background: a zombie still answers signal 0, and Claim
 	// waits for the process to be gone, not merely killed.
-	holder := func(stamp int64) int {
+	holder := func(stamp int64, addr string) int {
 		c := exec.Command("sleep", "30")
 		if err := c.Start(); err != nil {
 			t.Fatal(err)
 		}
 		go func() { _ = c.Wait() }()
 		t.Cleanup(func() { _ = c.Process.Kill() })
-		b, _ := json.Marshal(map[string]any{"PID": c.Process.Pid, "Stamp": stamp})
+		b, _ := json.Marshal(Owner{PID: c.Process.Pid, Stamp: stamp, Addr: addr})
 		if err := os.WriteFile(lockPath, b, 0o644); err != nil {
 			t.Fatal(err)
 		}
 		return c.Process.Pid
 	}
 
-	newer := holder(exeStamp() + 1)
-	if err := s.Claim(); err == nil {
+	newer := holder(exeStamp()+1, "127.0.0.1:7930")
+	owner, err := s.Claim("127.0.0.1:7777")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner == nil {
 		t.Fatal("claimed a directory held by a more recent build")
+	}
+	if owner.PID != newer || owner.Addr != "127.0.0.1:7930" {
+		t.Errorf("owner = %+v, want pid %d on 127.0.0.1:7930", owner, newer)
 	}
 	if !alive(newer) {
 		t.Error("the more recent build was killed")
 	}
 
-	older := holder(exeStamp() - 1)
-	if err := s.Claim(); err != nil {
-		t.Fatalf("takeover: %v", err)
-	}
-	if alive(older) {
-		t.Error("the older build is still running")
-	}
-	b, err := os.ReadFile(lockPath)
-	if err != nil || !strings.Contains(string(b), strconv.Itoa(os.Getpid())) {
-		t.Errorf("lock not ours: %s %v", b, err)
+	for _, stamp := range []int64{exeStamp() - 1, exeStamp()} {
+		loser := holder(stamp, "127.0.0.1:7930")
+		owner, err := s.Claim("127.0.0.1:7777")
+		if err != nil || owner != nil {
+			t.Fatalf("takeover of stamp %d: owner=%+v err=%v", stamp, owner, err)
+		}
+		if alive(loser) {
+			t.Errorf("the process with stamp %d is still running", stamp)
+		}
+		b, err := os.ReadFile(lockPath)
+		if err != nil || !strings.Contains(string(b), strconv.Itoa(os.Getpid())) || !strings.Contains(string(b), "127.0.0.1:7777") {
+			t.Errorf("lock not ours: %s %v", b, err)
+		}
 	}
 }

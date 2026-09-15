@@ -70,48 +70,51 @@ func OpenShadow(dir string) (*Shadow, error) {
 	return s, nil
 }
 
+// Owner is the snapwatch process that holds a directory: what the lock file in
+// its shadow repo says.
+type Owner struct {
+	PID   int
+	Stamp int64  // its executable's mtime: the build that wins is the recent one
+	Addr  string // where it serves, so a loser can send the browser there
+}
+
 // Claim makes this process the only snapwatch watching the directory: two of
 // them committing into the same shadow repo corrupt each other's snapshots.
 // The most recently built executable wins — it terminates the running one and
-// takes over; an older one refuses to start. A dev build (`go run`, watchexec)
-// is compiled seconds ago, so it always beats an installed release; a Nix
-// binary has a 1970 mtime and never steals the session back.
-func (s *Shadow) Claim() error {
+// takes over. A dev build (`go run`, watchexec) is compiled seconds ago, so it
+// always beats an installed release; a Nix binary has a 1970 mtime and never
+// steals the session back, though a newly launched one takes over its equals.
+// Returns nil once we own the directory, or the owner that keeps it.
+func (s *Shadow) Claim(addr string) (*Owner, error) {
 	path := filepath.Join(s.GitDir, "snapwatch.lock")
-	stamp := exeStamp()
-	var other struct {
-		PID   int
-		Stamp int64
-	}
+	me := Owner{PID: os.Getpid(), Stamp: exeStamp(), Addr: addr}
+	var other Owner
 	if b, err := os.ReadFile(path); err == nil && json.Unmarshal(b, &other) == nil &&
-		other.PID != os.Getpid() && alive(other.PID) {
-		if other.Stamp > stamp {
-			return fmt.Errorf("%s is already watched by a more recent snapwatch (pid %d)", s.WorkTree, other.PID)
+		other.PID != me.PID && alive(other.PID) {
+		if other.Stamp > me.Stamp {
+			return &other, nil
 		}
 		p, err := os.FindProcess(other.PID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err := p.Signal(syscall.SIGTERM); err != nil {
-			return err
+			return nil, err
 		}
 		// Wait for it to go: it still holds the listen socket and may be mid-commit.
 		for i := 0; alive(other.PID); i++ {
 			if i > 100 {
-				return fmt.Errorf("snapwatch pid %d will not stop", other.PID)
+				return nil, fmt.Errorf("snapwatch pid %d will not stop", other.PID)
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
 		log.Printf("took over from snapwatch pid %d", other.PID)
 	}
-	b, err := json.Marshal(struct {
-		PID   int
-		Stamp int64
-	}{os.Getpid(), stamp})
+	b, err := json.Marshal(me)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return os.WriteFile(path, b, 0o644)
+	return nil, os.WriteFile(path, b, 0o644)
 }
 
 // exeStamp is this binary's build time (its mtime), 0 when unknown.

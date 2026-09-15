@@ -84,9 +84,11 @@ prints (it opens a tab for you unless `--open=false`). That's it.
 One snapwatch per directory — two of them would commit into the same shadow
 repo and corrupt each other. Starting a second one on a directory hands the
 session to the **more recently built binary**: it terminates the running
-instance and takes over, an older one refuses to start. So a `go run` dev
-build always wins over an installed release, and never loses the session back
-to it.
+instance and takes over. An older one doesn't start — it opens the winner's
+page instead, so launching it is never a dead end. So a `go run` dev build
+always wins over an installed release and never loses the session back to it,
+while two binaries of the same age (two Nix builds, both stamped 1970) go to
+whichever was launched last.
 
 ### In the browser
 

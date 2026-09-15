@@ -36,8 +36,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := shadow.Claim(); err != nil {
+	// Lost the directory to a more recent build: send the browser to it instead
+	// of leaving the user with an error and no window.
+	owner, err := shadow.Claim(*addr)
+	if err != nil {
 		log.Fatal(err)
+	}
+	if owner != nil {
+		log.Printf("%s is already watched by a more recent snapwatch (pid %d) on http://%s", shadow.WorkTree, owner.PID, owner.Addr)
+		if *open {
+			_ = exec.Command("xdg-open", "http://"+owner.Addr).Run()
+		}
+		return
 	}
 	log.Printf("watching %s (shadow repo %s)", shadow.WorkTree, shadow.GitDir)
 	sv := NewServer(shadow)
