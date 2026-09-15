@@ -31,8 +31,10 @@ applyPrefs();
   <a class="logo" href="/" title="snapwatch"><img src="/static/logo.svg" alt=""> snapwatch</a>
   <button onclick="setPref('sidebar', !prefs.sidebar)" title="Toggle history (h)">☰</button>
   <button id="back" onclick="hideView()">← Esc or click to go back to the feed</button>
-  <input id="filter" placeholder="filter files… (src/ !_test)" title="Space-separated substrings a path must contain; !term excludes" oninput="applyFilter()">
+  <input id="filter" placeholder="filter files… (src/ !_test)" title="Space-separated substrings a path must contain; !term excludes (/)"
+         oninput="applyFilter()" onkeydown="if (event.key === 'Escape' || event.key === 'Enter') this.blur()">
   <span title="{{.Dir}}"><bdi dir="ltr">{{.Dir}}</bdi></span>
+  <button onclick="help.showModal()" title="Keyboard shortcuts (?)">?</button>
   <button onclick="settings.showModal()" title="Settings">⚙</button>
 </header>
 <div class="split">
@@ -72,6 +74,22 @@ applyPrefs();
     <button>Close</button>
   </form>
 </dialog>
+
+<dialog id="help">
+  <form method="dialog">
+    <table class="keys">
+      <tr><th>j</th><th>k</th><td>next / previous snapshot</td></tr>
+      <tr><th>]</th><th>[</th><td>next / previous file</td></tr>
+      <tr><th>g</th><th>G</th><td>top / bottom</td></tr>
+      <tr><th>c</th><th></th><td>fold or unfold every file</td></tr>
+      <tr><th>/</th><th></th><td>filter files by path (<code>src/ !_test</code>)</td></tr>
+      <tr><th>h</th><th></th><td>toggle the history sidebar</td></tr>
+      <tr><th>Esc</th><th></th><td>back to the feed</td></tr>
+      <tr><th>?</th><th></th><td>this help</td></tr>
+    </table>
+    <button>Close</button>
+  </form>
+</dialog>
 <script>
 function latest() { const s = document.querySelector('#feed section'); return s ? s.dataset.sha : ''; }
 // path filter: hide file blocks whose path misses a term (!term excludes), and
@@ -99,11 +117,42 @@ view.addEventListener('htmx:afterSwap', e => {
   history.replaceState(null, '', '/' + e.detail.pathInfo.requestPath.slice('/file'.length));
 });
 if (new URLSearchParams(location.search).has('path')) htmx.ajax('GET', '/file' + location.search, '#view');
+// Keyboard navigation: jump the feed between snapshots (j/k) and file blocks
+// ([/]). Targets are the visible ones only, so the filter narrows what j/k walk
+// through; scroll-margin-top keeps them clear of the sticky timestamp.
+const SNAPSHOTS = 'section:not([hidden])', BLOCKS = 'section:not([hidden]) details[data-path]:not([hidden])';
+function step(sel, dir) {
+  const els = [...feed.querySelectorAll(sel)];
+  // distance to where scrollIntoView would park the element: the feed's top edge,
+  // plus its scroll-margin. 0 means "this one is the current target".
+  const base = feed.getBoundingClientRect().top;
+  const tops = els.map(e => e.getBoundingClientRect().top - base - parseFloat(getComputedStyle(e).scrollMarginTop));
+  // forward: the first one still below the top edge; back: the last one that started above it
+  const el = dir > 0 ? els[tops.findIndex(y => y > 1)] : els[tops.filter(y => y < -1).length - 1];
+  el?.scrollIntoView();
+}
+function foldAll() {
+  const blocks = [...feed.querySelectorAll(BLOCKS)];
+  const open = blocks.some(d => d.open);
+  blocks.forEach(d => d.open = !open);
+}
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input, select') || settings.open) return;
-  if (e.key === 'Escape') hideView();
-  if (e.key === 'h') setPref('sidebar', !prefs.sidebar);
+  if (e.target.matches('input, select') || settings.open || help.open) return; // Esc closes dialogs natively
+  switch (e.key) {
+    case 'Escape': hideView(); break;
+    case 'h': setPref('sidebar', !prefs.sidebar); break;
+    case '?': help.showModal(); break;
+    case '/': e.preventDefault(); filter.select(); break;
+    case 'j': step(SNAPSHOTS, 1); break;
+    case 'k': step(SNAPSHOTS, -1); break;
+    case ']': step(BLOCKS, 1); break;
+    case '[': step(BLOCKS, -1); break;
+    case 'c': foldAll(); break;
+    case 'g': pane().scrollTo({ top: 0 }); break;
+    case 'G': pane().scrollTo({ top: pane().scrollHeight }); break;
+  }
 });
+function pane() { return document.documentElement.classList.contains('viewing') ? view : feed; }
 const hist = document.getElementById('history');
 // commit tooltip: one popover, filled from the hovered summary's data attributes.
 // It stays open while the mouse is over the summary or the tooltip itself, so

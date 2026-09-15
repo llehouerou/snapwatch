@@ -92,11 +92,16 @@ to it.
 
 | Key / control | Action |
 |---|---|
+| `j` / `k` | next / previous snapshot |
+| `]` / `[` | next / previous file |
+| `g` / `G` | top / bottom |
+| `c` | fold or unfold every file |
+| `/` or the header box | filter files by path: every term must match, `!term` excludes (`src/ !_test`) |
 | click a file in the sidebar | show that file's diff (commit or working tree) |
-| type in `filter files…` | keep only files whose path contains every term; `!term` excludes |
 | `Esc` or `← Esc or click…` | back to the feed |
 | `h` or `☰` | toggle the history sidebar |
 | `⊟ collapse all` | fold every commit in the sidebar |
+| `?` | the shortcut list |
 | `⚙` | theme, font, size |
 
 The URL mirrors what you're looking at (`/?rev=…&path=…`), so a reload or a
