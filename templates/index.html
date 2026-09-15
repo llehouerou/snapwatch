@@ -111,7 +111,7 @@ function applyFilter() {
 feed.addEventListener('htmx:afterSwap', applyFilter); // new snapshots and older pages
 // file view over the feed: shown when #view receives content, hidden with Esc / the back button
 // The URL mirrors the view (/?rev=…&path=…) so a reload or a shared link lands on the same file.
-function hideView() { document.documentElement.classList.remove('viewing'); history.replaceState(null, '', '/'); }
+function hideView() { document.documentElement.classList.remove('viewing'); history.replaceState(null, '', '/'); caughtUp(); }
 view.addEventListener('htmx:afterSwap', e => {
   document.documentElement.classList.add('viewing'); view.scrollTop = 0;
   history.replaceState(null, '', '/' + e.detail.pathInfo.requestPath.slice('/file'.length));
@@ -193,6 +193,26 @@ hist.addEventListener('htmx:afterSwap', () => {
 });
 // server restarted (new boot id) → reload so templates/static are fresh
 document.body.addEventListener('sse:boot', e => { if (e.detail.data !== '{{.Boot}}') location.reload(); });
+// Count in the title what lands while the feed is not what you are looking at:
+// another tab, or a file view on top of it. Events with no data are a moved
+// main line (a push): they refresh the sidebar, they are not a change to come
+// back for. The same event reaches body once per element listening for it, so
+// it is counted by SHA, not by event.
+const title = document.title;
+let unseen = 0, counted = '';
+document.body.addEventListener('sse:snapshot', e => {
+  const sha = e.detail.data;
+  if (!sha || sha === counted || !away()) return;
+  counted = sha;
+  document.title = '(' + ++unseen + ') ' + title;
+});
+function away() { return document.hidden || document.documentElement.classList.contains('viewing'); }
+function caughtUp() {
+  if (away()) return;
+  unseen = 0;
+  document.title = title;
+}
+document.addEventListener('visibilitychange', caughtUp);
 // replace the datalist with installed fonts (Chromium only, asks permission once)
 async function loadFonts() {
   if (!window.queryLocalFonts || fonts.dataset.loaded) return;
